@@ -4,14 +4,12 @@
 #include <condition_variable> // std::condition_variable
 #include <future> // std::promise std::future std::launch std::packaged_task std::async
 #include <semaphore> // std::counting_semaphore std::binary_semaphore
+#include <latch> // std::latch
+#include <vector> // std::vector
+#include <barrier> // std::barrier
 using namespace std::literals;
 
-#if SPDLOG_EXISTS
-#  include <spdlog/spdlog.h>
-#else
-#  include <iostream>
-#  define SPDLOG_INFO(x) std::cout << (x) << "\n";
-#endif
+#include <common.hpp> // join wait_for
 
 void example_01()
 {
@@ -90,13 +88,41 @@ void example_02()
 
     print_02(mtx, i);
 
-    if (t.joinable()) // 保證主線程結束前子線程執行完畢
-    {
-        t.join();
-    }
+    join(t);
 }
 
-void example_03()
+void example_03_01()
+{
+    std::mutex mtx; // 鎖
+    std::condition_variable cv; // 條件變量
+    bool flag = false;
+
+    std::thread t([&mtx, &cv, &flag]
+        {
+            std::unique_lock<std::mutex> lock(mtx);
+            cv.wait(lock, [&flag] { return flag; }); // 等待主線程修改
+            SPDLOG_INFO("Child recv");
+            std::this_thread::sleep_for(1s);
+            flag = true;
+            lock.unlock();
+            cv.notify_one();
+            SPDLOG_INFO("Child send");
+        });
+
+    SPDLOG_INFO("Main send");
+    std::unique_lock<std::mutex> lock(mtx); // #1
+    flag = true;
+    lock.unlock(); // 提前解鎖 #2
+    cv.notify_one();
+    std::this_thread::sleep_for(1s);
+    lock.lock(); // 再次上鎖 #3
+    cv.wait(lock, [&flag] { return flag; }); // 等待子線程修改
+    SPDLOG_INFO("Main recv");
+
+    join(t);
+}
+
+void example_03_02()
 {
     std::mutex mtx; // 鎖
     std::condition_variable cv; // 條件變量
@@ -117,46 +143,14 @@ void example_03()
 
     SPDLOG_INFO(""); // 這條語句先於child_1與child_2線程 #3
 
-    {
-        std::lock_guard<std::mutex> lock(mtx);
-        current = State::Start;
-    }
+    std::unique_lock<std::mutex> lock(mtx);
+    current = State::Start;
+    lock.unlock();
     cv.notify_all(); // 通知所有線程 #4
 
-    if (child_1.joinable())
-    {
-        child_1.join();
-    }
+    join(child_1);
 
-    if (child_2.joinable())
-    {
-        child_2.join();
-    }
-}
-
-template <typename T, typename Rep, typename Per>
-void wait_for(std::future<T>& _ft, const std::chrono::duration<Rep, Per>& _rel_time)
-{
-    auto flag = true;
-    while (flag)
-    {
-        auto status = _ft.wait_for(_rel_time);
-        switch (status)
-        {
-        case std::future_status::ready:
-            SPDLOG_INFO("ready: {0}", _ft.get());
-            flag = false;
-            break;
-        case std::future_status::timeout:
-            SPDLOG_INFO("timeout");
-            break;
-        case std::future_status::deferred:
-            SPDLOG_INFO("deferred");
-            break;
-        default:
-            break;
-        }
-    }
+    join(child_2);
 }
 
 void example_04()
@@ -170,12 +164,10 @@ void example_04()
             pms.set_value(99);
         });
 
-    wait_for(ft, std::chrono::milliseconds(200));
+    auto result = wait_for(ft, std::chrono::milliseconds(200));
+    SPDLOG_INFO("result: {0}", result);
 
-    if (t.joinable())
-    {
-        t.join();
-    }
+    join(t);
 }
 
 void example_05()
@@ -187,17 +179,12 @@ void example_05()
         });
     std::future<int> ft = task.get_future();
 
-    std::thread t([&task]
-        {
-            task();
-        });
+    std::thread t([&task] { task(); });
 
-    wait_for(ft, std::chrono::milliseconds(200));
+    auto result = wait_for(ft, std::chrono::milliseconds(200));
+    SPDLOG_INFO("result: {0}", result);
 
-    if (t.joinable())
-    {
-        t.join();
-    }
+    join(t);
 }
 
 void example_06()
@@ -208,7 +195,8 @@ void example_06()
             return 99;
         });
 
-    wait_for(ft, std::chrono::milliseconds(200));
+    auto result = wait_for(ft, std::chrono::milliseconds(200));
+    SPDLOG_INFO("result: {0}", result);
 }
 
 void example_07()
@@ -223,33 +211,75 @@ void example_07()
     SPDLOG_INFO("");
 }
 
-template<typename F>
-struct scope_exit
-{
-    scope_exit(F _f) : f(_f) {}
-    ~scope_exit() { f(); }
-    F f;
-};
-
 void example_08()
 {
     std::binary_semaphore semaphore(0);
-    int i = 0;
 
-    std::jthread t([&semaphore, &i]
+    std::jthread t([&semaphore]
         {
             semaphore.acquire(); // 主線程發信號後才會調用
-            SPDLOG_INFO("Got");
+            SPDLOG_INFO("Child recv");
             std::this_thread::sleep_for(1s);
-            SPDLOG_INFO("Send");
+            SPDLOG_INFO("Child send");
             semaphore.release();
         });
 
-    SPDLOG_INFO("Send");
+    SPDLOG_INFO("Main send");
     semaphore.release();
     std::this_thread::sleep_for(1s);
     semaphore.acquire(); // 等待子線程發信號
-    SPDLOG_INFO("Got");
+    SPDLOG_INFO("Main recv");
+}
+
+void on_latch(std::latch& _lt)
+{
+    while (true)
+    {
+        if (_lt.try_wait())
+        {
+            SPDLOG_INFO("latch open");
+            return;
+        }
+        else
+        {
+            SPDLOG_INFO("count_down");
+            _lt.count_down();
+        }
+        std::this_thread::sleep_for(100ms);
+    }
+}
+
+void example_09()
+{
+    std::latch lt(5);
+
+    std::jthread t([&lt] { on_latch(lt); });
+
+    on_latch(lt);
+}
+
+void example_10()
+{
+    bool flag = true;
+    std::barrier b(5, []() noexcept // noexcept必不可少，不然無法編譯
+        {
+            SPDLOG_INFO("CompletionFunction");
+        });
+
+    std::jthread t([&flag, &b]
+        {
+            SPDLOG_INFO("before wait");
+            b.wait(b.arrive());
+            SPDLOG_INFO("after wait");
+            flag = false;
+        });
+
+    while (flag)
+    {
+        std::this_thread::sleep_for(100ms);
+        SPDLOG_INFO("arrive");
+        auto _ = b.arrive();
+    }
 }
 
 int main()
@@ -262,7 +292,8 @@ int main()
 
     //example_02();
 
-    //example_03();
+    //example_03_01();
+    //example_03_02();
 
     //example_04();
 
@@ -272,7 +303,11 @@ int main()
 
     //example_07();
 
-    example_08();
+    //example_08();
+
+    //example_09();
+    
+    example_10();
 
     return 0;
 }

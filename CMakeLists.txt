@@ -42,7 +42,7 @@ if(WIN32)
   get_WIN32_WINNT(ver)
   cmake_print_variables(CMAKE_SYSTEM_VERSION)
   cmake_print_variables(ver)
-  add_definitions(-D_WIN32_WINNT=${ver})
+  add_compile_definitions(_WIN32_WINNT=${ver})
 endif()
 
 find_package(spdlog CONFIG) # 可選
