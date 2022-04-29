@@ -1,4 +1,4 @@
-#include <thread> // std::thread std::jthread
+ï»¿#include <thread> // std::thread std::jthread
 #include <chrono> // std::chrono
 #include <mutex>  // std::mutex std::lock_guard std::unique_lock
 #include <condition_variable> // std::condition_variable
@@ -20,7 +20,7 @@ void example_01()
         }, __LINE__);
 
     SPDLOG_INFO("");
-    if (t.joinable()) // ±£×CÖ÷¾€³Ì½YÊøÇ°×Ó¾€³ÌˆÌĞĞÍê®…
+    if (t.joinable()) // ä¿è­‰ä¸»ç·šç¨‹çµæŸå‰å­ç·šç¨‹åŸ·è¡Œå®Œç•¢
     {
         t.join();
     }
@@ -32,8 +32,8 @@ void print_02(std::mutex& _mtx, int& _i)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
         {
-            std::lock_guard<std::mutex> lock(_mtx); // ×Ô„Ó½âæi
-            if (_i >= 10) // ÅĞ”àÒ²Òª¼Óæi
+            std::lock_guard<std::mutex> lock(_mtx); // è‡ªå‹•è§£é–
+            if (_i >= 10) // åˆ¤æ–·ä¹Ÿè¦åŠ é–
             {
                 return;
             }
@@ -59,19 +59,19 @@ void print_03(std::mutex& _mtx, std::condition_variable& _cv, int& _i, State& _c
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
         {
             std::unique_lock<std::mutex> lock(_mtx); // #1
-            if (_i >= 10) // ÅĞ”àÒ²Òª¼Óæi
+            if (_i >= 10) // åˆ¤æ–·ä¹Ÿè¦åŠ é–
             {
                 return;
             }
             _cv.wait(lock, [&_current, _type]
                 {
                     return _current == _type || _current == State::Start;
-                }); // µÈ´ıÍ¨Öª
+                }); // ç­‰å¾…é€šçŸ¥
             SPDLOG_INFO("{}: {}", name, _i);
             _i++;
             _current = _type == State::Child_1 ? State::Child_2 : State::Child_1;
-            lock.unlock(); // ÌáÇ°½âæi #2
-            _cv.notify_one(); // Í¨ÖªÁíÒ»‚€¾€³Ì
+            lock.unlock(); // æå‰è§£é– #2
+            _cv.notify_one(); // é€šçŸ¥å¦ä¸€å€‹ç·šç¨‹
         }
     }
 }
@@ -93,14 +93,14 @@ void example_02()
 
 void example_03_01()
 {
-    std::mutex mtx; // æi
-    std::condition_variable cv; // —l¼ş×ƒÁ¿
+    std::mutex mtx; // é–
+    std::condition_variable cv; // æ¢ä»¶è®Šé‡
     bool flag = false;
 
     std::thread t([&mtx, &cv, &flag]
         {
             std::unique_lock<std::mutex> lock(mtx);
-            cv.wait(lock, [&flag] { return flag; }); // µÈ´ıÖ÷¾€³ÌĞŞ¸Ä
+            cv.wait(lock, [&flag] { return flag; }); // ç­‰å¾…ä¸»ç·šç¨‹ä¿®æ”¹
             SPDLOG_INFO("Child recv");
             std::this_thread::sleep_for(1s);
             flag = true;
@@ -112,11 +112,11 @@ void example_03_01()
     SPDLOG_INFO("Main send");
     std::unique_lock<std::mutex> lock(mtx); // #1
     flag = true;
-    lock.unlock(); // ÌáÇ°½âæi #2
+    lock.unlock(); // æå‰è§£é– #2
     cv.notify_one();
     std::this_thread::sleep_for(1s);
-    lock.lock(); // ÔÙ´ÎÉÏæi #3
-    cv.wait(lock, [&flag] { return flag; }); // µÈ´ı×Ó¾€³ÌĞŞ¸Ä
+    lock.lock(); // å†æ¬¡ä¸Šé– #3
+    cv.wait(lock, [&flag] { return flag; }); // ç­‰å¾…å­ç·šç¨‹ä¿®æ”¹
     SPDLOG_INFO("Main recv");
 
     join(t);
@@ -124,29 +124,29 @@ void example_03_01()
 
 void example_03_02()
 {
-    std::mutex mtx; // æi
-    std::condition_variable cv; // —l¼ş×ƒÁ¿
+    std::mutex mtx; // é–
+    std::condition_variable cv; // æ¢ä»¶è®Šé‡
     int i = 0;
-    State current = State::None; // ÓÃì¶˜Ë×R¾€³Ì
+    State current = State::None; // ç”¨æ–¼æ¨™è­˜ç·šç¨‹
 
-    // ¾€³ÌÒ»
+    // ç·šç¨‹ä¸€
     std::thread child_1([&mtx, &cv, &i, &current]
         {
             print_03(mtx, cv, i, current, State::Child_1);
         });
 
-    // ¾€³Ì¶ş
+    // ç·šç¨‹äºŒ
     std::thread child_2([&mtx, &cv, &i, &current]
         {
             print_03(mtx, cv, i, current, State::Child_2);
         });
 
-    SPDLOG_INFO(""); // ß@—lÕZ¾äÏÈì¶child_1Åcchild_2¾€³Ì #3
+    SPDLOG_INFO(""); // é€™æ¢èªå¥å…ˆæ–¼child_1èˆ‡child_2ç·šç¨‹ #3
 
     std::unique_lock<std::mutex> lock(mtx);
     current = State::Start;
     lock.unlock();
-    cv.notify_all(); // Í¨ÖªËùÓĞ¾€³Ì #4
+    cv.notify_all(); // é€šçŸ¥æ‰€æœ‰ç·šç¨‹ #4
 
     join(child_1);
 
@@ -201,7 +201,7 @@ void example_06()
 
 void example_07()
 {
-    // Îö˜‹•r×Ô„ÓÕ{ÓÃt.join()
+    // ææ§‹æ™‚è‡ªå‹•èª¿ç”¨t.join()
     std::jthread t([](int _line)
         {
             std::this_thread::sleep_for(std::chrono::seconds(3));
@@ -217,7 +217,7 @@ void example_08()
 
     std::jthread t([&semaphore]
         {
-            semaphore.acquire(); // Ö÷¾€³Ì°lĞÅÌ–áá²Å•şÕ{ÓÃ
+            semaphore.acquire(); // ä¸»ç·šç¨‹ç™¼ä¿¡è™Ÿå¾Œæ‰æœƒèª¿ç”¨
             SPDLOG_INFO("Child recv");
             std::this_thread::sleep_for(1s);
             SPDLOG_INFO("Child send");
@@ -227,7 +227,7 @@ void example_08()
     SPDLOG_INFO("Main send");
     semaphore.release();
     std::this_thread::sleep_for(1s);
-    semaphore.acquire(); // µÈ´ı×Ó¾€³Ì°lĞÅÌ–
+    semaphore.acquire(); // ç­‰å¾…å­ç·šç¨‹ç™¼ä¿¡è™Ÿ
     SPDLOG_INFO("Main recv");
 }
 
@@ -235,7 +235,7 @@ void on_latch(std::latch& _lt)
 {
     while (true)
     {
-        if (_lt.try_wait())
+        if (_lt.try_wait()) // éé˜»å¡ç­‰å¾…è¨ˆæ•¸ç‚ºé›¶ #2
         {
             SPDLOG_INFO("latch open");
             return;
@@ -243,7 +243,7 @@ void on_latch(std::latch& _lt)
         else
         {
             SPDLOG_INFO("count_down");
-            _lt.count_down();
+            _lt.count_down(); // è¨ˆæ•¸æ¸›ä¸€ #1
         }
         std::this_thread::sleep_for(100ms);
     }
@@ -261,7 +261,7 @@ void example_09()
 void example_10()
 {
     bool flag = true;
-    std::barrier b(5, []() noexcept // noexcept±Ø²»¿ÉÉÙ£¬²»È»Ÿo·¨¾×g
+    std::barrier b(5, []() noexcept // noexceptå¿…ä¸å¯å°‘ï¼Œä¸ç„¶ç„¡æ³•ç·¨è­¯
         {
             SPDLOG_INFO("CompletionFunction");
         });
@@ -269,16 +269,16 @@ void example_10()
     std::jthread t([&flag, &b]
         {
             SPDLOG_INFO("before wait");
-            b.wait(b.arrive());
+            b.arrive_and_wait(); // ç­‰åŒb.wait(b.arrive()); #2
             SPDLOG_INFO("after wait");
-            flag = false;
+            flag = false; // æ³¨é‡‹é€™å¥æœƒè¨ˆæ•¸æœƒé€±è€Œè¤‡å§‹ #3
         });
 
     while (flag)
     {
         std::this_thread::sleep_for(100ms);
         SPDLOG_INFO("arrive");
-        auto _ = b.arrive();
+        auto _ = b.arrive(); // bçš„è¨ˆæ•¸æ¸›ä¸€ #1
     }
 }
 

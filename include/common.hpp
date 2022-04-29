@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <thread> // std::thread
 #include <future> // std::future
 #include <chrono> // std::chrono
