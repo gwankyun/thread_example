@@ -51,6 +51,7 @@ set(main main)
 add_executable(${main})
 target_sources(${main} PRIVATE
   src/main.cpp
+  include/common.hpp
 )
 target_include_directories(${main} PRIVATE include)
 target_compile_features(${main} PUBLIC cxx_std_20)
@@ -58,5 +59,5 @@ target_link_libraries(${main} PRIVATE
   $<TARGET_NAME_IF_EXISTS:spdlog::spdlog>
 )
 target_compile_definitions(${main} PRIVATE
-  SPDLOG_EXISTS=$<TARGET_EXISTS:spdlog::spdlog>
+  HAS_SPDLOG=$<TARGET_EXISTS:spdlog::spdlog>
 )
