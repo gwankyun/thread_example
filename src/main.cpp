@@ -12,14 +12,14 @@ using namespace std::literals;
 
 #include <common.hpp> // join wait_for
 
-// C++11
+/// @brief 創建線程
 void example_thread()
 {
-    std::thread t([](int _line)
+    std::thread t([]
         {
             std::this_thread::sleep_for(std::chrono::seconds(3));
-            DBG(_line);
-        }, __LINE__);
+            SPDLOG_INFO("child");
+        });
 
     SPDLOG_INFO("main");
     if (t.joinable()) // 保證主線程結束前子線程執行完畢
@@ -78,11 +78,11 @@ void print_notify(std::mutex& _mtx, std::condition_variable& _cv, int& _i, State
     }
 }
 
-// C++11
+/// @brief 鎖
 void example_mutex()
 {
     std::mutex mtx;
-    int i = 0;
+    auto i = 0;
 
     std::thread t([&mtx, &i]
         {
@@ -94,19 +94,19 @@ void example_mutex()
     join(t);
 }
 
-// C++11
+/// @brief 條件變量
 void example_condition_variable_notify_one()
 {
     std::mutex mtx; // 鎖
     std::condition_variable cv; // 條件變量
-    bool flag = false;
+    auto flag = false;
 
     std::thread t([&mtx, &cv, &flag]
         {
             std::unique_lock<std::mutex> lock(mtx);
             cv.wait(lock, [&flag] { return flag; }); // 等待主線程#4通知
             SPDLOG_INFO("Child recv");
-            std::this_thread::sleep_for(1s);
+            std::this_thread::sleep_for(std::chrono::seconds(1));
             flag = true;
             lock.unlock();
             cv.notify_one(); // 通知主線程 #5
@@ -118,7 +118,7 @@ void example_condition_variable_notify_one()
     flag = true;
     lock.unlock(); // 提前解鎖 #2
     cv.notify_one(); // 通知子線程 #4
-    std::this_thread::sleep_for(1s);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
     lock.lock(); // 再次上鎖 #3
     cv.wait(lock, [&flag] { return flag; }); // 等待子線程#5通知
     SPDLOG_INFO("Main recv");
@@ -126,12 +126,12 @@ void example_condition_variable_notify_one()
     join(t);
 }
 
-// C++11
+/// @brief 條件變量
 void example_condition_variable_notify_all()
 {
     std::mutex mtx; // 鎖
     std::condition_variable cv; // 條件變量
-    int i = 0;
+    auto i = 0;
     State current = State::None; // 用於標識線程
 
     // 線程一
@@ -160,7 +160,7 @@ void example_condition_variable_notify_all()
 
 void print_child()
 {
-    for (size_t i = 0; i < 10; i++)
+    for (auto i = 0; i < 10; i++)
     {
         SPDLOG_INFO("child");
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -170,7 +170,7 @@ void print_child()
 template<typename T>
 bool get_value(std::future<T>& _future, T& _value)
 {
-    bool flag = false;
+    auto flag = false;
     wait_for(_future, std::chrono::milliseconds(100),
         [&_value, &flag, &_future](std::future_status _status)
         {
@@ -194,20 +194,20 @@ bool get_value(std::future<T>& _future, T& _value)
     return flag;
 }
 
-// C++11
+/// @brief 期望與承諾
 void example_promise()
 {
-    std::promise<int> pms;
-    std::future<int> ft = pms.get_future();
+    std::promise<int> promise;
+    auto future = promise.get_future();
 
-    std::thread t([&pms]
+    std::thread t([&promise]
         {
             print_child();
-            pms.set_value(99);
+            promise.set_value(99);
         });
 
     int result = 0;
-    if (get_value(ft, result))
+    if (get_value(future, result))
     {
         DBG(result);
     }
@@ -215,7 +215,7 @@ void example_promise()
     join(t);
 }
 
-// C++11
+/// @brief 任務
 void example_packaged_task()
 {
     std::packaged_task<int()> task([]
@@ -223,12 +223,12 @@ void example_packaged_task()
             print_child();
             return 99;
         });
-    std::future<int> ft = task.get_future();
+    auto future = task.get_future();
 
     std::thread t([&task] { task(); });
 
     int result = 0;
-    if (get_value(ft, result))
+    if (get_value(future, result))
     {
         DBG(result);
     }
@@ -236,36 +236,36 @@ void example_packaged_task()
     join(t);
 }
 
-// C++11
+/// @brief 異步調用
 void example_async()
 {
-    auto ft = std::async(std::launch::async, []
+    auto future = std::async(std::launch::async, []
         {
             print_child();
             return 99;
         });
 
     int result = 0;
-    if (get_value(ft, result))
+    if (get_value(future, result))
     {
         DBG(result);
     }
 }
 
-// C++20
+/// @brief 自動合併線程類
 void example_jthread()
 {
     // 析構時自動調用t.join()
-    std::jthread t([](int _line)
+    std::jthread t([]
         {
             std::this_thread::sleep_for(3s);
-            SPDLOG_INFO(_line);
-        }, __LINE__);
+            SPDLOG_INFO("child");
+        });
 
-    SPDLOG_INFO("");
+    SPDLOG_INFO("main");
 }
 
-// C++20
+/// @brief 信號量
 void example_semaphore()
 {
     std::binary_semaphore semaphore(0);
@@ -304,7 +304,7 @@ void on_latch(std::latch& _lt)
     }
 }
 
-// C++20
+/// @brief 閂
 void example_latch()
 {
     std::latch lt(5);
@@ -314,10 +314,10 @@ void example_latch()
     on_latch(lt);
 }
 
-// C++20
+/// @brief 屏障
 void example_barrier()
 {
-    bool flag = true;
+    auto flag = true;
     std::barrier b(5, []() noexcept // noexcept必不可少，不然無法編譯
         {
             SPDLOG_INFO("CompletionFunction");
@@ -339,26 +339,26 @@ void example_barrier()
     }
 }
 
-// C++11
+/// @brief 分離
 void example_detach()
 {
     std::mutex mtx; // 鎖
     std::condition_variable cv; // 條件變量
-    bool flag = false; // 用於標識子線程結束
+    auto flag = false; // 用於標識子線程結束
 
-    std::thread t([&mtx, &cv, &flag](int _line)
+    std::thread t([&mtx, &cv, &flag]
         {
             std::this_thread::sleep_for(std::chrono::seconds(3));
-            DBG(_line);
             std::unique_lock<std::mutex> lock(mtx);
             flag = true;
             lock.unlock();
+            SPDLOG_INFO("child");
             cv.notify_one();
-        }, __LINE__);
+        });
 
-    DBG(t.joinable());
+    DBG(t.joinable()); // true
     t.detach(); // 線程和線程柄分離
-    DBG(t.joinable());
+    DBG(t.joinable()); // false
 
     wait_for(mtx, cv, std::chrono::milliseconds(200), [&flag] { return flag; },
         [](bool _result)
@@ -382,7 +382,7 @@ void print_atomic(std::atomic<int>& _i)
     }
 }
 
-// C++11
+/// @brief 原子操作
 void example_atomic()
 {
     std::atomic<int> i = 0;
@@ -416,7 +416,7 @@ int main()
 
     //example_async();
 
-    example_jthread();
+    //example_jthread();
 
     //example_semaphore();
 
@@ -424,7 +424,7 @@ int main()
     //
     //example_barrier();
 
-    //example_detach();
+    example_detach();
 
     //example_atomic();
 
