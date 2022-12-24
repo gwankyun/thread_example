@@ -61,3 +61,16 @@ target_link_libraries(${main} PRIVATE
 target_compile_definitions(${main} PRIVATE
   HAS_SPDLOG=$<TARGET_EXISTS:spdlog::spdlog>
 )
+
+set(windows windows)
+add_executable(${windows})
+target_sources(${windows} PRIVATE
+  src/windows.cpp
+)
+target_include_directories(${windows} PRIVATE include)
+target_link_libraries(${windows} PRIVATE
+  $<TARGET_NAME_IF_EXISTS:spdlog::spdlog>
+)
+target_compile_definitions(${windows} PRIVATE
+  HAS_SPDLOG=$<TARGET_EXISTS:spdlog::spdlog>
+)
