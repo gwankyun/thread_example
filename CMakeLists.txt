@@ -65,6 +65,10 @@ target_compile_definitions(${main} PRIVATE
 set(windows windows)
 add_executable(${windows})
 target_sources(${windows} PRIVATE
+  include/lite/thread.hpp
+  include/lite/mutex.hpp
+  include/lite/event.hpp
+  include/lite/future.hpp
   src/windows.cpp
 )
 target_include_directories(${windows} PRIVATE include)

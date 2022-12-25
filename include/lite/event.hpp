@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include <Windows.h>
+#include "common.hpp"
 
 namespace lite
 {
@@ -7,8 +7,8 @@ namespace lite
     {
         HANDLE event = CreateEvent(
             NULL,
-            _manual ? true : false,  // 是否需要手動調用ResetEvent，自動模式時衹會激活一次
-            _initial ? true : false, // 初始是否有信號
+            _manual ? TRUE : FALSE,  // 是否需要手動調用ResetEvent，自動模式時衹會激活一次
+            _initial ? TRUE : FALSE, // 初始是否有信號
             NULL);
         return event;
     }
@@ -23,7 +23,7 @@ namespace lite
 
     inline DWORD wait_event(HANDLE &_event, unsigned long _milliseconds = INFINITE)
     {
-        return WaitForSingleObject(_event, _milliseconds);
+        return wait(_event, _milliseconds);
     }
 
     class Event

@@ -1,10 +1,17 @@
 ﻿#pragma once
-#include <Windows.h>
 #include "event.hpp"
 
 namespace lite
 {
-#if __cplusplus < 201103L
+#if __cplusplus >= 201103L
+    enum class future_status
+    {
+        ready,
+        timeout,
+        deferred
+    };
+    using future_statusType = future_status;
+#else
     struct future_status
     {
         enum Type
@@ -15,14 +22,6 @@ namespace lite
         };
     };
     typedef future_status::Type future_statusType;
-#else
-    enum class future_status
-    {
-        ready,
-        timeout,
-        deferred
-    };
-    using future_statusType = future_status;
 #endif
 
     template <typename T>

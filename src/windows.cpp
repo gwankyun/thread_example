@@ -2,18 +2,18 @@
 #include <string>
 #include <log.hpp>
 #include <Windows.h>
-#include <thread.hpp>
-#include <mutex.hpp>
-#include <future.hpp>
+#include <lite/thread.hpp>
+#include <lite/mutex.hpp>
+#include <lite/future.hpp>
 
 void example_CreateThread()
 {
     struct Func
     {
-        static DWORD WINAPI func(LPVOID param)
+        static int func(int* param)
         {
             Sleep(3000);
-            *(int*)param = 1;
+            *param = 1;
             return 0;
         }
     };
@@ -42,11 +42,11 @@ void example_CreateMutex()
 {
     struct Func
     {
-        static DWORD WINAPI func(LPVOID param)
+        static int func(int* param)
         {
             lite::lock_guard<lite::mutex> guard(g_mutex);
             Sleep(3000);
-            *(int*)param = 1;
+            *param = 1;
             return 0;
         }
     };
@@ -96,18 +96,16 @@ void example_promise()
 
     struct Func
     {
-        static DWORD WINAPI func(LPVOID param)
+        static int func(lite::promise<int>* param)
         {
             Sleep(3000);
-            ((lite::promise<int>*)param)->set_value(1);
+            param->set_value(1);
             return 0;
         }
     };
 
     lite::thread t(Func::func, &pms);
     Sleep(1000);
-
-    // ft.wait();
 
     while (true)
     {
@@ -119,87 +117,44 @@ void example_promise()
         DBG("waiting");
         Sleep(100);
     }
-    
+
 
     DBG(ft.get());
     if (t.joinable())
     {
         t.join();
     }
-    
-}
 
-inline HANDLE create_event(bool _manual, bool _initial)
-{
-    HANDLE event = CreateEvent(
-        NULL,
-        _manual ? true : false, // 是否需要手動調用ResetEvent，自動模式時衹會激活一次
-        _initial ? true : false, // 初始是否有信號
-        NULL);
-    return event;
-}
-
-inline void close_event(HANDLE& _event)
-{
-    if (_event != NULL)
-    {
-        CloseHandle(_event);
-    }
 }
 
 void example_event()
 {
     bool manual = true;
-    HANDLE event = create_event(manual, false);
-    if (!event)
-    {
-        return;
-    }
-
-    struct Param
-    {
-        HANDLE event;
-        int id;
-        bool manual;
-    };
+    lite::Event event(manual, false);
 
     struct Func
     {
-        static DWORD WINAPI func(LPVOID _param)
+        static int func(lite::Event* _event, bool manual, int _id)
         {
-            Param* param = (Param*)_param;
-            if (param == NULL)
-            {
-                return 0;
-            }
-
-            WaitForSingleObject(param->event, INFINITE);
-            DBG(param->id);
+            _event->wait();
+            DBG(_id);
 
             // 自動模式，事件衹會觸發一次。
-            if (!param->manual)
+            if (!manual)
             {
-                SetEvent(param->event);
+                _event->set();
             }
 
             return 0;
         }
     };
 
-    Param param[2];
-    param[0].event = event;
-    param[0].id = 1;
-    param[0].manual = manual;
-    param[1].event = event;
-    param[1].id = 2;
-    param[1].manual = manual;
-
-    lite::thread t1(Func::func, &param[0]);
-    lite::thread t2(Func::func, &param[1]);
+    lite::thread t1(Func::func, &event, manual, 1);
+    lite::thread t2(Func::func, &event, manual, 2);
 
     DBG("start");
     Sleep(3000);
-    SetEvent(event);
+    event.set();
 
     if (t1.joinable())
     {
@@ -210,8 +165,6 @@ void example_event()
     {
         t2.join();
     }
-
-    close_event(event);
 }
 
 int main()
@@ -220,10 +173,10 @@ int main()
     spdlog::set_pattern("[%Y-%m-%d %T.%e] [%^%l%$] [t:%6t] [p:%6P] [%-20!!:%4#] %v");
 #endif
 
-    // example_CreateThread();
-    // example_CreateMutex();
+     //example_CreateThread();
+     //example_CreateMutex();
     example_promise();
-    // example_event()
+    //example_event();
 
     return 0;
 }
