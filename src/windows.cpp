@@ -167,16 +167,123 @@ void example_event()
     }
 }
 
+void example_packaged_task()
+{
+    struct Func
+    {
+        static int func()
+        {
+            DBG("");
+            return 99;
+        }
+    };
+
+    lite::packaged_task<int()> task(Func::func);
+    lite::future<int> ft = task.get_future();
+
+    lite::thread t([&task] { task(); });
+    // lite::thread t(task);
+    Sleep(3000);
+    DBG("");
+    DBG(ft.get());
+    t.join();
+}
+
+// int func()
+// {
+//     Sleep(2000);
+//     DBG("");
+//     return 99;
+// }
+
+void example_async()
+{
+    struct Func
+    {
+        static int func()
+        {
+            Sleep(1000);
+            DBG("");
+            return 0;
+        }
+
+        static int func1(int a)
+        {
+            Sleep(1000);
+            DBG(a);
+            return a;
+        }
+
+        static int func2(int a, int b)
+        {
+            Sleep(3000);
+            DBG(a + b);
+            return a + b;
+        }
+    };
+
+    DBG(0);
+    lite::future<int> ft = lite::async(Func::func);
+    ft.wait();
+    DBG(ft.get());
+
+    DBG(1);
+    lite::future<int> ft1 = lite::async(Func::func1, 1);
+    ft1.wait();
+    DBG(ft1.get());
+
+    DBG(2);
+    lite::future<int> ft2 = lite::async(Func::func2, 1, 2);
+    while (true)
+    {
+        lite::type::future_status status = ft2.wait_for(500);
+        if (status == lite::future_status::ready)
+        {
+            DBG(ft2.get());
+            break;
+        }
+        else
+        {
+            DBG("timeout");
+        }
+        Sleep(100);
+    }
+}
+
+int f(int n)
+{
+    return n + 1;
+}
+
+template<typename F, typename A1>
+typename lite::result_of<F>::type call(F f, A1 a1)
+{
+    return f(a1);
+}
+
+typedef int (*Fn)(int);
+
 int main()
 {
 #if HAS_SPDLOG
-    spdlog::set_pattern("[%Y-%m-%d %T.%e] [%^%l%$] [t:%6t] [p:%6P] [%-20!!:%4#] %v");
+    spdlog::set_pattern("[%Y-%m-%d %T.%e] [%^%l%$] [t:%6t] [p:%6P] [%-35!!:%4#] %v");
 #endif
 
      //example_CreateThread();
      //example_CreateMutex();
-    example_promise();
+    // example_promise();
     //example_event();
+    // DBG()
+    // funcion_traits<>
+    // DBG(call(f, 1));
+
+    // example_packaged_task();
+
+    Fn fn = f;
+    DBG(fn(9));
+
+    example_async();
+
 
     return 0;
 }

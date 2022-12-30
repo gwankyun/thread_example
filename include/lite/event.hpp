@@ -62,6 +62,8 @@ namespace lite
         }
 
     private:
+        Event(const Event&);
+
         native_handle_type m_handle;
     };
 }
