@@ -1,7 +1,11 @@
 ﻿#pragma once
+#include <vector>
 #include "thread.hpp"
 #include "event.hpp"
-#include <vector>
+#include "memory.hpp"
+// #include <bluetoothapis.h>/
+// #include <bluetoothapis.h>/
+// #include <
 
 namespace lite
 {
@@ -123,7 +127,7 @@ namespace lite
         {
             DBG(m_block->count());
             m_block->decrease();
-            if (delete_block(m_block.get()))
+            if (m_block->count() == 0)
             {
                 if (m_thread.get() != NULLPTR)
                 {
@@ -133,8 +137,39 @@ namespace lite
                     }
                     delete_ptr(m_thread);
                 }
+
+                // if (m_thread.use_count() == 1)
+                // {
+                //     if (m_thread->joinable())
+                //     {
+                //         m_thread->join();
+                //     }
+                // }
+
                 delete_ptr(m_promise);
+                delete_ptr(m_block);
             }
+
+            // if (m_thread.use_count() == 1)
+            // {
+            //     if (m_thread->joinable())
+            //     {
+            //         m_thread->join();
+            //     }
+            // }
+
+            // if (delete_block(m_block.get()))
+            // {
+            //     if (m_thread.get() != NULLPTR)
+            //     {
+            //         if (m_thread.get()->joinable())
+            //         {
+            //             m_thread.get()->join();
+            //         }
+            //         delete_ptr(m_thread);
+            //     }
+            //     delete_ptr(m_promise);
+            // }
         }
 
         void wait() const
@@ -169,7 +204,9 @@ namespace lite
         }
 
         ptr<thread> m_thread;
+        // shared_ptr<thread> m_thread;
         ptr<packaged_task_interface> m_promise;
+        // shared_ptr<packaged_task_interface> m_promise;
 
     private:
         ptr< future_block<T> > m_block;
@@ -377,6 +414,7 @@ namespace lite
         } func(task);
 
         thread *t = new thread(func);
+        // shared_ptr<thread> t = shared_ptr<thread>(new thread(func));
         ft.m_thread = t;
         return ft;
     }

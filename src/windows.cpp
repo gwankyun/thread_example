@@ -5,6 +5,9 @@
 #include <lite/thread.hpp>
 #include <lite/mutex.hpp>
 #include <lite/future.hpp>
+#include <lite/memory.hpp>
+// #include <.cmake/boo
+// #include <catcj
 
 void example_CreateThread()
 {
@@ -227,27 +230,55 @@ void example_async()
     ft.wait();
     DBG(ft.get());
 
-    DBG(1);
-    lite::future<int> ft1 = lite::async(Func::func1, 1);
-    ft1.wait();
-    DBG(ft1.get());
+    // DBG(1);
+    // lite::future<int> ft1 = lite::async(Func::func1, 1);
+    // ft1.wait();
+    // DBG(ft1.get());
 
-    DBG(2);
-    lite::future<int> ft2 = lite::async(Func::func2, 1, 2);
-    while (true)
+    // DBG(2);
+    // lite::future<int> ft2 = lite::async(Func::func2, 1, 2);
+    // while (true)
+    // {
+    //     lite::type::future_status status = ft2.wait_for(500);
+    //     if (status == lite::future_status::ready)
+    //     {
+    //         DBG(ft2.get());
+    //         break;
+    //     }
+    //     else
+    //     {
+    //         DBG("timeout");
+    //     }
+    //     Sleep(100);
+    // }
+}
+
+void example_shared_ptr()
+{
+    struct S
     {
-        lite::type::future_status status = ft2.wait_for(500);
-        if (status == lite::future_status::ready)
+        S()
         {
-            DBG(ft2.get());
-            break;
+            DBG("");
         }
-        else
+        virtual ~S()
         {
-            DBG("timeout");
+            DBG("");
         }
-        Sleep(100);
-    }
+    };
+    struct S2 : public S
+    {
+        S2()
+        {
+            DBG("");
+        }
+        ~S2() OVERRIDE
+        {
+            DBG("");
+        }
+    };
+    lite::shared_ptr<S> s = lite::shared_ptr<S>(new S2());
+    lite::shared_ptr<S2> s2 = lite::dynamic_pointer_cast<S2>(s);
 }
 
 int f(int n)
@@ -266,7 +297,7 @@ typedef int (*Fn)(int);
 int main()
 {
 #if HAS_SPDLOG
-    spdlog::set_pattern("[%Y-%m-%d %T.%e] [%^%l%$] [t:%6t] [p:%6P] [%-35!!:%4#] %v");
+    spdlog::set_pattern("[%Y-%m-%d %T.%e] [%^%l%$] [t:%6t] [p:%6P] [%-45!!:%4#] %v");
 #endif
 
      //example_CreateThread();
@@ -279,11 +310,14 @@ int main()
 
     // example_packaged_task();
 
-    Fn fn = f;
-    DBG(fn(9));
+    // Fn fn = f;
+    // DBG(fn(9));
 
     example_async();
 
+    // example_shared_ptr();
+
+    // boost::k
 
     return 0;
 }

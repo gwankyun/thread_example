@@ -147,6 +147,7 @@ namespace lite
 
         ~thread()
         {
+            DBG("");
             detail::close_thread(m_handle);
             delete_ptr(m_func);
         }

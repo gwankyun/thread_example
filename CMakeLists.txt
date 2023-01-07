@@ -13,6 +13,9 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 # 輸出目錄
 set(source_dir ${CMAKE_CURRENT_SOURCE_DIR})
 
+# 包含模塊
+include(CMakePrintHelpers) # cmake_print_variables
+
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${source_dir}/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${source_dir}/bin)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${source_dir}/lib)
@@ -62,6 +65,10 @@ target_compile_definitions(${main} PRIVATE
   HAS_SPDLOG=$<TARGET_EXISTS:spdlog::spdlog>
 )
 
+set(BOOST_ROOT "c:/Program Files/boost_1_81_0/")
+find_package(Boost REQUIRED)
+cmake_print_variables(Boost_INCLUDE_DIRS)
+
 set(windows windows)
 add_executable(${windows})
 target_sources(${windows} PRIVATE
@@ -71,9 +78,10 @@ target_sources(${windows} PRIVATE
   include/lite/future.hpp
   src/windows.cpp
 )
-target_include_directories(${windows} PRIVATE include)
+target_include_directories(${windows} PRIVATE include)# ${Boost_INCLUDE_DIRS})
 target_link_libraries(${windows} PRIVATE
   $<TARGET_NAME_IF_EXISTS:spdlog::spdlog>
+  Boost::headers
 )
 target_compile_definitions(${windows} PRIVATE
   HAS_SPDLOG=$<TARGET_EXISTS:spdlog::spdlog>

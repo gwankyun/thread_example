@@ -128,98 +128,98 @@ namespace lite
         }
     }
 
-    template <typename T>
-    struct control_block
-    {
-        control_block()
-            : data(NULLPTR), shared_count(0){};
+    // template <typename T>
+    // struct control_block
+    // {
+    //     control_block()
+    //         : data(NULLPTR), shared_count(0){};
 
-        control_block(T* _ptr)
-            : data(_ptr), shared_count(0){};
+    //     control_block(T* _ptr)
+    //         : data(_ptr), shared_count(0){};
 
-        ~control_block()
-        {
-            delete_ptr(data);
-        }
+    //     ~control_block()
+    //     {
+    //         delete_ptr(data);
+    //     }
 
-        void increase()
-        {
-            shared_count++;
-        }
+    //     void increase()
+    //     {
+    //         shared_count++;
+    //     }
 
-        void decrease()
-        {
-            if (shared_count > 0)
-            {
-                shared_count--;
-            }
-        }
+    //     void decrease()
+    //     {
+    //         if (shared_count > 0)
+    //         {
+    //             shared_count--;
+    //         }
+    //     }
 
-        T *data;
-        int shared_count;
-    };
+    //     T *data;
+    //     int shared_count;
+    // };
 
-    template <typename T>
-    class shared_ptr
-    {
-    public:
-        shared_ptr() NOEXCEPT
-        {
-        };
+    // template <typename T>
+    // class shared_ptr
+    // {
+    // public:
+    //     shared_ptr() NOEXCEPT
+    //     {
+    //     };
 
-        template <typename Y>
-        explicit shared_ptr(Y *_ptr)
-        : m_block(new control_block(_ptr))
-        {
-        }
+    //     template <typename Y>
+    //     explicit shared_ptr(Y *_ptr)
+    //     : m_block(new control_block<Y>(_ptr))
+    //     {
+    //     }
 
-        shared_ptr(const shared_ptr &r) NOEXCEPT
-            : m_block(r.m_block)
-        {
-            m_block->increase();
-        }
+    //     shared_ptr(const shared_ptr &r) NOEXCEPT
+    //         : m_block(r.m_block)
+    //     {
+    //         m_block->increase();
+    //     }
 
-        template <typename Y>
-        shared_ptr(const shared_ptr<Y> &r) NOEXCEPT
-            : m_block(r.m_block)
-        {
-            m_block->increase();
-        }
+    //     template <typename Y>
+    //     shared_ptr(const shared_ptr<Y> &r) NOEXCEPT
+    //         : m_block(r.m_block)
+    //     {
+    //         m_block->increase();
+    //     }
 
-        ~shared_ptr()
-        {
-            if (m_block != NULLPTR)
-            {
-                m_block->decrease();
-                if (m_block->shared_count == 0)
-                {
-                    delete_ptr(m_block);
-                }
-            }
-        }
+    //     ~shared_ptr()
+    //     {
+    //         if (m_block != NULLPTR)
+    //         {
+    //             m_block->decrease();
+    //             if (m_block->shared_count == 0)
+    //             {
+    //                 delete_ptr(m_block);
+    //             }
+    //         }
+    //     }
 
-        shared_ptr& operator=(const shared_ptr& r) NOEXCEPT
-        {
-            if (&r != this)
-            {
-                m_block = r.m_block;
-                m_block->increase();
-            }
-            return *this;
-        }
+    //     shared_ptr& operator=(const shared_ptr& r) NOEXCEPT
+    //     {
+    //         if (&r != this)
+    //         {
+    //             m_block = r.m_block;
+    //             m_block->increase();
+    //         }
+    //         return *this;
+    //     }
 
-        template <class Y>
-        shared_ptr &operator=(const shared_ptr<Y> &r) NOEXCEPT
-        {
-            if (&r != this)
-            {
-                m_block = r.m_block;
-                m_block->increase();
-            }
-            return *this;
-        }
+    //     template <class Y>
+    //     shared_ptr &operator=(const shared_ptr<Y> &r) NOEXCEPT
+    //     {
+    //         if (&r != this)
+    //         {
+    //             m_block = r.m_block;
+    //             m_block->increase();
+    //         }
+    //         return *this;
+    //     }
 
-    private:
-        control_block *m_block;
-    };
+    // private:
+    //     control_block<T> *m_block;
+    // };
 }
