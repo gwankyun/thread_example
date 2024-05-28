@@ -300,6 +300,8 @@ int main()
     spdlog::set_pattern("[%Y-%m-%d %T.%e] [%^%l%$] [t:%6t] [p:%6P] [%-45!!:%4#] %v");
 #endif
 
+    // spdlog::set_
+
      //example_CreateThread();
      //example_CreateMutex();
     // example_promise();

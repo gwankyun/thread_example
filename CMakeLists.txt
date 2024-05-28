@@ -49,6 +49,7 @@ if(WIN32)
 endif()
 
 find_package(spdlog CONFIG) # 可選
+cmake_print_variables(spdlog_FOUND)
 
 set(main main)
 add_executable(${main})

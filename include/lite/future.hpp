@@ -398,7 +398,7 @@ namespace lite
     inline future<R> async(R (*_f)())
     {
         typedef packaged_task<R()> task_type;
-        task_type *task = new task_type(_f);
+        task_type *task = new task_type(_f); // 需要釋放
         future<R> ft = task->get_future();
         ft.m_promise = task;
 
@@ -413,7 +413,7 @@ namespace lite
             task_type *task;
         } func(task);
 
-        thread *t = new thread(func);
+        thread *t = new thread(func); // 需要釋放
         // shared_ptr<thread> t = shared_ptr<thread>(new thread(func));
         ft.m_thread = t;
         return ft;
