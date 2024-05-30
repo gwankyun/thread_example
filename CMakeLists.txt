@@ -1,14 +1,11 @@
 ﻿# cmake最低版本
-cmake_minimum_required(VERSION 3.25)
+cmake_minimum_required(VERSION 3.29)
 
 # 項目名
 set(project thread_example)
 project(${project})
 
 include(CMakePrintHelpers)
-
-# 啟用IDE目錄功能
-set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # 輸出目錄
 set(source_dir ${CMAKE_CURRENT_SOURCE_DIR})
@@ -66,9 +63,21 @@ target_compile_definitions(${main} PRIVATE
   HAS_SPDLOG=$<TARGET_EXISTS:spdlog::spdlog>
 )
 
-set(BOOST_ROOT "c:/Program Files/boost_1_81_0/")
 find_package(Boost REQUIRED)
 cmake_print_variables(Boost_INCLUDE_DIRS)
+
+find_package(Catch2 3 REQUIRED)
+
+set(thread_mutex thread_mutex)
+add_executable(${thread_mutex})
+target_sources(${thread_mutex} PRIVATE
+  src/test.cpp
+)
+target_compile_features(${thread_mutex} PUBLIC cxx_std_20)
+target_link_libraries(${thread_mutex} PRIVATE
+  spdlog::spdlog
+  Catch2::Catch2
+)
 
 set(windows windows)
 add_executable(${windows})
