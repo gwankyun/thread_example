@@ -143,8 +143,11 @@ void update_atomic(std::atomic<int>& _i)
 {
     while (true)
     {
-        auto value = _i.fetch_add(1); // 原子加一並返回原先的值
-        if (value >= 10)
+        if (_i.load() < 10) // 原子讀取值
+        {
+            _i++; // 原子加一
+        }
+        else
         {
             return;
         }
@@ -171,9 +174,9 @@ int example_atomic()
     return i;
 }
 
-TEST_CASE("future promise", "[atomic]")
+TEST_CASE("atomic", "[atomic]")
 {
-    // REQUIRE(example_atomic() == 10);
+    REQUIRE(example_atomic() == 10);
 }
 
 TEST_CASE("future promise", "[future]")

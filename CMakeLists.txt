@@ -68,13 +68,13 @@ cmake_print_variables(Boost_INCLUDE_DIRS)
 
 find_package(Catch2 3 REQUIRED)
 
-set(thread_mutex thread_mutex)
-add_executable(${thread_mutex})
-target_sources(${thread_mutex} PRIVATE
+set(test test)
+add_executable(${test})
+target_sources(${test} PRIVATE
   src/test.cpp
 )
-target_compile_features(${thread_mutex} PUBLIC cxx_std_20)
-target_link_libraries(${thread_mutex} PRIVATE
+target_compile_features(${test} PUBLIC cxx_std_23)
+target_link_libraries(${test} PRIVATE
   spdlog::spdlog
   Catch2::Catch2
 )
