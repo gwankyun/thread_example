@@ -139,32 +139,33 @@ int example_async(int _value)
     return future.get();
 }
 
-void update_atomic(std::atomic<int>& _i)
-{
-    while (true)
-    {
-        if (_i.load() < 10) // 原子讀取值
-        {
-            _i++; // 原子加一
-        }
-        else
-        {
-            return;
-        }
-    }
-}
-
 /// @brief 原子操作
 int example_atomic()
 {
     std::atomic<int> i = 0;
 
-    std::thread t([&i]
+    /// @brief 原子更新
+    auto update_atomic = [&]
+    {
+        while (true)
         {
-            update_atomic(i);
+            if (i.load() < 10) // 原子讀取值
+            {
+                i++; // 原子加一
+            }
+            else
+            {
+                return;
+            }
+        }
+    };
+
+    std::thread t([&]
+        {
+            update_atomic();
         });
 
-    update_atomic(i);
+    update_atomic();
 
     if (t.joinable())
     {
@@ -172,6 +173,29 @@ int example_atomic()
     }
 
     return i;
+}
+
+TEST_CASE("jthread", "[jthread]")
+{
+    auto value = 0;
+
+    /// @brief 自動合併線程類
+    auto example_jthread = [&]
+    {
+        // 析構時自動調用t.join()
+        std::jthread t(
+            [&]
+            {
+                std::this_thread::sleep_for(3s);
+                SPDLOG_INFO("child");
+                value = 10;
+            });
+
+        SPDLOG_INFO("main");
+    };
+
+    example_jthread();
+    REQUIRE(value == 10);
 }
 
 TEST_CASE("atomic", "[atomic]")
@@ -213,11 +237,11 @@ TEST_CASE("thread mutex", "[mutex]")
     REQUIRE(s == "123");
 }
 
-int main(int argc, char* argv[])
+int main(int _argc, char* _argv[])
 {
     std::string log_format{"[%C-%m-%d %T.%e] [%^%L%$] [t:%6t] [%-20!!:%4#] %v"};
     spdlog::set_pattern(log_format);
 
-    auto result = Catch::Session().run(argc, argv);
+    auto result = Catch::Session().run(_argc, _argv);
     return result;
 }
