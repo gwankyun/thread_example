@@ -1,8 +1,11 @@
 ﻿#include <chrono> // std::chrono
-#include <mutex>  // std::mutex std::lock_guard
-#include <future> // std::promise std::future std::launch std::packaged_task std::async
+
+#include <future>    // std::promise std::future std::launch std::packaged_task std::async
+#include <mutex>     // std::mutex std::lock_guard
+#include <semaphore> // std::counting_semaphore std::binary_semaphore
+#include <thread>    // std::thread
+
 #include <string>
-#include <thread> // std::thread
 #include <vector>
 
 #include <catch2/../catch2/catch_session.hpp>
@@ -95,11 +98,7 @@ int example_promise(int _value)
     std::promise<int> promise;
     auto future = promise.get_future();
 
-    std::thread t(
-        [&, _value]
-        {
-            promise.set_value(_value);
-        });
+    std::thread t([&, _value] { promise.set_value(_value); });
 
     if (t.joinable())
     {
@@ -111,7 +110,8 @@ int example_promise(int _value)
 
 int example_packaged_task(int _value)
 {
-    std::packaged_task<int()> task([&]
+    std::packaged_task<int()> task(
+        [&]
         {
             // print_child();
             return _value;
@@ -130,11 +130,7 @@ int example_packaged_task(int _value)
 
 int example_async(int _value)
 {
-    auto future = std::async(std::launch::async,
-                             [&_value]
-                             {
-                                 return _value;
-                             });
+    auto future = std::async(std::launch::async, [&_value] { return _value; });
 
     return future.get();
 }
@@ -160,10 +156,7 @@ int example_atomic()
         }
     };
 
-    std::thread t([&]
-        {
-            update_atomic();
-        });
+    std::thread t([&] { update_atomic(); });
 
     update_atomic();
 
@@ -173,6 +166,38 @@ int example_atomic()
     }
 
     return i;
+}
+
+/// @brief 信號量
+void example_semaphore(std::string& _str)
+{
+    std::binary_semaphore semaphore(0);
+
+    std::jthread t(
+        [&]
+        {
+            semaphore.acquire(); // 主線程發信號後才會調用
+            _str += "2";
+            SPDLOG_INFO("Child recv");
+            std::this_thread::sleep_for(1s);
+            SPDLOG_INFO("Child send");
+            semaphore.release();
+        });
+
+    SPDLOG_INFO("Main send");
+    _str += "1";
+    semaphore.release();
+    std::this_thread::sleep_for(1s);
+    semaphore.acquire(); // 等待子線程發信號
+    _str += "3";
+    SPDLOG_INFO("Main recv");
+}
+
+TEST_CASE("semaphore", "[binary_semaphore]")
+{
+    std::string str;
+    example_semaphore(str);
+    REQUIRE(str == "123");
 }
 
 TEST_CASE("jthread", "[jthread]")
