@@ -4,6 +4,7 @@
 #include <mutex>     // std::mutex std::lock_guard
 #include <semaphore> // std::counting_semaphore std::binary_semaphore
 #include <thread>    // std::thread
+#include <latch>
 
 #include <string>
 #include <vector>
@@ -169,15 +170,16 @@ int example_atomic()
 }
 
 /// @brief 信號量
-void example_semaphore(std::string& _str)
+std::string example_semaphore()
 {
     std::binary_semaphore semaphore(0);
+    std::string str;
 
     std::jthread t(
         [&]
         {
             semaphore.acquire(); // 主線程發信號後才會調用
-            _str += "2";
+            str += "2";
             SPDLOG_INFO("Child recv");
             std::this_thread::sleep_for(1s);
             SPDLOG_INFO("Child send");
@@ -185,19 +187,46 @@ void example_semaphore(std::string& _str)
         });
 
     SPDLOG_INFO("Main send");
-    _str += "1";
+    str += "1";
     semaphore.release();
     std::this_thread::sleep_for(1s);
     semaphore.acquire(); // 等待子線程發信號
-    _str += "3";
+    str += "3";
     SPDLOG_INFO("Main recv");
+    return str;
 }
 
 TEST_CASE("semaphore", "[binary_semaphore]")
 {
-    std::string str;
-    example_semaphore(str);
-    REQUIRE(str == "123");
+    REQUIRE(example_semaphore() == "123");
+}
+
+int example_latch(int _count)
+{
+    std::latch lt(_count);
+    std::atomic<int> value = 0;
+
+    std::vector<std::jthread> t(_count);
+
+    for (auto i = 0u; i < _count; i++)
+    {
+        t[i] = std::jthread(
+            [&, i] {
+                SPDLOG_INFO(i);
+                lt.count_down();
+                lt.wait();
+                value++;
+            });
+    }
+
+    lt.wait();
+    return value;
+}
+
+TEST_CASE("latch", "[latch]")
+{
+    auto count = 5;
+    REQUIRE(example_latch(count) == count);
 }
 
 TEST_CASE("jthread", "[jthread]")
