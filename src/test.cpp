@@ -1,10 +1,11 @@
 ﻿#include <chrono> // std::chrono
 
+#include <barrier>   // std::barrier
 #include <future>    // std::promise std::future std::launch std::packaged_task std::async
+#include <latch>     // std::latch
 #include <mutex>     // std::mutex std::lock_guard
 #include <semaphore> // std::counting_semaphore std::binary_semaphore
 #include <thread>    // std::thread
-#include <latch>
 
 #include <string>
 #include <vector>
@@ -206,27 +207,68 @@ int example_latch(int _count)
     std::latch lt(_count);
     std::atomic<int> value = 0;
 
-    std::vector<std::jthread> t(_count);
-
-    for (auto i = 0u; i < _count; i++)
+    // 確保線程都執行完
     {
-        t[i] = std::jthread(
-            [&, i] {
-                SPDLOG_INFO(i);
-                lt.count_down();
-                lt.wait();
-                value++;
-            });
+        std::vector<std::jthread> t(_count);
+
+        for (auto i = 0u; i < _count; i++)
+        {
+            t[i] = std::jthread(
+                [&, i]
+                {
+                    SPDLOG_INFO(i);
+                    lt.count_down();
+                    lt.wait();
+                    value++;
+                    SPDLOG_INFO("value: {}", value.load());
+                });
+        }
     }
 
     lt.wait();
-    return value;
+    return value.load();
 }
 
 TEST_CASE("latch", "[latch]")
 {
     auto count = 5;
     REQUIRE(example_latch(count) == count);
+}
+
+int example_barrier(int _count)
+{
+    std::atomic<int> value = 0;
+
+    auto completion = [&]() noexcept {
+        SPDLOG_INFO("completion");
+    };
+
+    std::barrier br(_count, completion);
+
+    // 確保線程都執行完
+    {
+        std::vector<std::jthread> t(_count);
+
+        for (auto i = 0u; i < _count; i++)
+        {
+            t[i] = std::jthread(
+                [&, i]
+                {
+                    SPDLOG_INFO(i);
+                    br.arrive_and_wait();
+                    value++;
+                    SPDLOG_INFO("value: {}", value.load());
+                });
+        }
+    }
+
+    return value.load();
+}
+
+TEST_CASE("barrier", "[barrier]")
+{
+    auto count = 5;
+    REQUIRE(example_barrier(count) == count);
 }
 
 TEST_CASE("jthread", "[jthread]")
