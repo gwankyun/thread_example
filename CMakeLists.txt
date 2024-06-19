@@ -7,6 +7,9 @@ project(${project})
 
 include(CMakePrintHelpers)
 
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+include(common)
+
 # 輸出目錄
 set(source_dir ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -20,33 +23,13 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${source_dir}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${source_dir}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${source_dir}/lib)
 
-if(WIN32)
-  function(get_WIN32_WINNT version)
-    if(CMAKE_SYSTEM_VERSION)
-      set(ver ${CMAKE_SYSTEM_VERSION})
-      string(REGEX MATCH "^([0-9]+).([0-9])" ver ${ver})
-      string(REGEX MATCH "^([0-9]+)" verMajor ${ver})
-      # Check for Windows 10, b/c we'll need to convert to hex 'A'.
-      if("${verMajor}" MATCHES "10")
-        set(verMajor "A")
-        string(REGEX REPLACE "^([0-9]+)" ${verMajor} ver ${ver})
-      endif()
-      # Remove all remaining '.' characters.
-      string(REPLACE "." "" ver ${ver})
-      # Prepend each digit with a zero.
-      string(REGEX REPLACE "([0-9A-Z])" "0\\1" ver ${ver})
-      set(${version} "0x${ver}" PARENT_SCOPE)
-    endif()
-  endfunction()
-
-  get_WIN32_WINNT(ver)
-  cmake_print_variables(CMAKE_SYSTEM_VERSION)
-  cmake_print_variables(ver)
-  add_compile_definitions(_WIN32_WINNT=${ver})
-endif()
+to_WIN32_WINNT(${CMAKE_SYSTEM_VERSION} ver)
+cmake_print_variables(CMAKE_SYSTEM_VERSION)
+cmake_print_variables(ver)
+add_compile_definitions("$<$<BOOL:WIN32>:_WIN32_WINNT=${ver}")
 
 find_package(spdlog CONFIG) # 可選
-cmake_print_variables(spdlog_FOUND)
+check_package(spdlog)
 
 set(main main)
 add_executable(${main})
@@ -67,9 +50,10 @@ if(POLICY CMP0167)
   cmake_policy(SET CMP0167 NEW)
 endif()
 find_package(Boost REQUIRED)
-cmake_print_variables(Boost_INCLUDE_DIRS)
+check_package(Boost)
 
 find_package(Catch2 3 REQUIRED)
+check_package(Catch2)
 
 set(test test)
 add_executable(${test})
