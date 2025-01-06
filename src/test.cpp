@@ -239,9 +239,7 @@ int example_barrier(int _count)
 {
     std::atomic<int> value = 0;
 
-    auto completion = [&]() noexcept {
-        SPDLOG_INFO("completion");
-    };
+    auto completion = [&]() noexcept { SPDLOG_INFO("completion"); };
 
     std::barrier br(_count, completion);
 
