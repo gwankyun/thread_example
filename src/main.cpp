@@ -8,6 +8,7 @@
 #include <vector> // std::vector
 #include <barrier> // std::barrier
 #include <atomic>
+#include <iostream>
 using namespace std::literals;
 
 #include <common.hpp> // join wait_for
@@ -286,116 +287,154 @@ void example_semaphore()
     SPDLOG_INFO("Main recv");
 }
 
-void on_latch(std::latch& _lt)
-{
-    while (true)
-    {
-        if (_lt.try_wait()) // 非阻塞等待計數為零 #2
-        {
-            SPDLOG_INFO("latch open");
-            return;
-        }
-        else
-        {
-            SPDLOG_INFO("count_down");
-            _lt.count_down(); // 計數減一 #1
-        }
-        std::this_thread::sleep_for(100ms);
-    }
-}
+// void on_latch(std::latch& _lt)
+// {
+//     while (true)
+//     {
+//         std::this_thread::sleep_for(500ms);
+//         if (_lt.try_wait()) // 非阻塞等待計數為零 #2
+//         {
+//             SPDLOG_INFO("latch open");
+//             return;
+//         }
+//         else
+//         {
+//             SPDLOG_INFO("count_down");
+//             _lt.count_down(); // 計數減一 #1
+//         }
+//     }
+// }
 
 /// @brief 閂
-void example_latch()
-{
-    std::latch lt(5);
+// void example_latch()
+// {
+//     // std::latch lt(5);
 
-    std::jthread t([&lt] { on_latch(lt); });
+//     // std::jthread t([&lt] { on_latch(lt); });
 
-    on_latch(lt);
-}
+//     // on_latch(lt);
+
+//     struct Job
+//     {
+//         const std::string name;
+//         std::string product{"未工作"};
+//         std::thread action{};
+//     };
+
+//     Job jobs[]{{"Annika"}, {"Buru"}, {"Chuck"}};
+ 
+//     std::latch work_done{std::size(jobs)};
+//     std::latch start_clean_up{1};
+ 
+//     auto work = [&](Job& my_job)
+//     {
+//         my_job.product = my_job.name + " 已工作";
+//         work_done.count_down();
+//         start_clean_up.wait();
+//         my_job.product = my_job.name + " 已清理";
+//     };
+ 
+//     std::cout << "工作启动... ";
+//     for (auto& job : jobs)
+//         job.action = std::thread{work, std::ref(job)};
+ 
+//     work_done.wait();
+//     std::cout << "完成:\n";
+//     for (auto const& job : jobs)
+//         std::cout << "  " << job.product << '\n';
+ 
+//     std::cout << "清理工作线程... ";
+//     start_clean_up.count_down();
+//     for (auto& job : jobs)
+//         job.action.join();
+ 
+//     std::cout << "完成:\n";
+//     for (auto const& job : jobs)
+//         std::cout << "  " << job.product << '\n';
+// }
 
 /// @brief 屏障
-void example_barrier()
-{
-    auto flag = true;
-    std::barrier b(5, []() noexcept // noexcept必不可少，不然無法編譯
-        {
-            SPDLOG_INFO("CompletionFunction");
-        });
+// void example_barrier()
+// {
+//     auto flag = true;
+//     std::barrier b(5, []() noexcept // noexcept必不可少，不然無法編譯
+//         {
+//             SPDLOG_INFO("CompletionFunction");
+//         });
 
-    std::jthread t([&flag, &b]
-        {
-            SPDLOG_INFO("before wait");
-            b.arrive_and_wait(); // 等同b.wait(b.arrive()); #2
-            SPDLOG_INFO("after wait");
-            flag = false; // 注釋這句會計數會週而複始 #3
-        });
+//     std::jthread t([&flag, &b]
+//         {
+//             SPDLOG_INFO("before wait");
+//             b.arrive_and_wait(); // 等同b.wait(b.arrive()); #2
+//             SPDLOG_INFO("after wait");
+//             flag = false; // 注釋這句會計數會週而複始 #3
+//         });
 
-    while (flag)
-    {
-        std::this_thread::sleep_for(100ms);
-        SPDLOG_INFO("arrive");
-        auto _ = b.arrive(); // b的計數減一 #1
-    }
-}
+//     while (flag)
+//     {
+//         std::this_thread::sleep_for(100ms);
+//         SPDLOG_INFO("arrive");
+//         auto _ = b.arrive(); // b的計數減一 #1
+//     }
+// }
 
-/// @brief 分離
-void example_detach()
-{
-    std::mutex mtx; // 鎖
-    std::condition_variable cv; // 條件變量
-    auto flag = false; // 用於標識子線程結束
+// /// @brief 分離
+// void example_detach()
+// {
+//     std::mutex mtx; // 鎖
+//     std::condition_variable cv; // 條件變量
+//     auto flag = false; // 用於標識子線程結束
 
-    std::thread t([&mtx, &cv, &flag]
-        {
-            std::this_thread::sleep_for(std::chrono::seconds(3));
-            std::unique_lock<std::mutex> lock(mtx);
-            flag = true;
-            lock.unlock();
-            SPDLOG_INFO("child");
-            cv.notify_one();
-        });
+//     std::thread t([&mtx, &cv, &flag]
+//         {
+//             std::this_thread::sleep_for(std::chrono::seconds(3));
+//             std::unique_lock<std::mutex> lock(mtx);
+//             flag = true;
+//             lock.unlock();
+//             SPDLOG_INFO("child");
+//             cv.notify_one();
+//         });
 
-    DBG(t.joinable()); // true
-    t.detach(); // 線程和線程柄分離
-    DBG(t.joinable()); // false
+//     DBG(t.joinable()); // true
+//     t.detach(); // 線程和線程柄分離
+//     DBG(t.joinable()); // false
 
-    wait_for(mtx, cv, std::chrono::milliseconds(200), [&flag] { return flag; },
-        [](bool _result)
-        {
-            DBG(_result);
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
-            return _result;
-        });
-}
+//     wait_for(mtx, cv, std::chrono::milliseconds(200), [&flag] { return flag; },
+//         [](bool _result)
+//         {
+//             DBG(_result);
+//             std::this_thread::sleep_for(std::chrono::milliseconds(200));
+//             return _result;
+//         });
+// }
 
-void print_atomic(std::atomic<int>& _i)
-{
-    while (true)
-    {
-        auto value = _i.fetch_add(1); // 原子加一並返回原先的值
-        if (value >= 10)
-        {
-            return;
-        }
-        DBG(value);
-    }
-}
+// void print_atomic(std::atomic<int>& _i)
+// {
+//     while (true)
+//     {
+//         auto value = _i.fetch_add(1); // 原子加一並返回原先的值
+//         if (value >= 10)
+//         {
+//             return;
+//         }
+//         DBG(value);
+//     }
+// }
 
 /// @brief 原子操作
-void example_atomic()
-{
-    std::atomic<int> i = 0;
+// void example_atomic()
+// {
+//     std::atomic<int> i = 0;
 
-    std::thread t([&i]
-        {
-            print_atomic(i);
-        });
+//     std::thread t([&i]
+//         {
+//             print_atomic(i);
+//         });
 
-    print_atomic(i);
+//     print_atomic(i);
 
-    join(t);
-}
+//     join(t);
+// }
 
 int main()
 {
@@ -403,30 +442,30 @@ int main()
     spdlog::set_pattern("[%Y-%m-%d %T.%e] [%^%l%$] [t:%6t] [p:%6P] [%-20!!:%4#] %v");
 #endif
 
-    //example_thread();
+    example_thread();
 
-    //example_mutex();
+    // example_mutex();
 
-    //example_condition_variable_notify_one();
-    //example_condition_variable_notify_all();
+    // example_condition_variable_notify_one();
+    // example_condition_variable_notify_all();
 
-    //example_promise();
+    // example_promise();
 
-    //example_packaged_task();
+    // example_packaged_task();
 
-    //example_async();
+    // example_async();
 
-    //example_jthread();
+    // example_jthread();
 
-    //example_semaphore();
+    // example_semaphore();
 
-    //example_latch();
-    //
-    //example_barrier();
+    // example_latch();
+    
+    // example_barrier();
 
-    example_detach();
+    // example_detach();
 
-    //example_atomic();
+    // example_atomic();
 
     return 0;
 }
