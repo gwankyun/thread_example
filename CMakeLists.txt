@@ -28,7 +28,7 @@ cmake_print_variables(CMAKE_SYSTEM_VERSION)
 cmake_print_variables(ver)
 add_compile_definitions("$<$<BOOL:WIN32>:_WIN32_WINNT=${ver}")
 
-find_package(spdlog CONFIG) # 可選
+find_package(spdlog CONFIG REQUIRED)
 check_package(spdlog)
 
 set(common common)
@@ -38,11 +38,12 @@ target_sources(${common} INTERFACE
 )
 target_include_directories(${common} INTERFACE include)
 target_link_libraries(${common} INTERFACE
-  $<TARGET_NAME_IF_EXISTS:spdlog::spdlog>
+  # $<TARGET_NAME_IF_EXISTS:spdlog::spdlog>
+  spdlog::spdlog
 )
-target_compile_definitions(${common} INTERFACE
-  HAS_SPDLOG=$<TARGET_EXISTS:spdlog::spdlog>
-)
+# target_compile_definitions(${common} INTERFACE
+#   HAS_SPDLOG=$<TARGET_EXISTS:spdlog::spdlog>
+# )
 
 set(main main)
 add_executable(${main})
@@ -56,51 +57,13 @@ target_link_libraries(${main} PRIVATE
 
 set(example_list detach_example atomic_example barrier_example latch_example
   semaphore_example jthread_example async_example packaged_task_example
-  promise_example condition_variable_notify_all_example condition_variable_notify_one_example
-  mutex_example thread_example
+  condition_variable_notify_all_example condition_variable_notify_one_example
+  mutex_example thread_example promise_example
 )
-
-set(detach_example detach_example)
-add_executable(${detach_example})
-
-set(atomic_example atomic_example)
-add_executable(${atomic_example})
-
-set(barrier_example barrier_example)
-add_executable(${barrier_example})
-
-set(latch_example latch_example)
-add_executable(${latch_example})
-
-set(semaphore_example semaphore_example)
-add_executable(${semaphore_example})
-
-set(jthread_example jthread_example)
-add_executable(${jthread_example})
-
-set(async_example async_example)
-add_executable(${async_example})
-
-set(packaged_task_example packaged_task_example)
-add_executable(${packaged_task_example})
-
-set(promise_example promise_example)
-add_executable(${promise_example})
-
-set(condition_variable_notify_all_example condition_variable_notify_all_example)
-add_executable(${condition_variable_notify_all_example})
-
-set(condition_variable_notify_one_example condition_variable_notify_one_example)
-add_executable(${condition_variable_notify_one_example})
-
-set(mutex_example mutex_example)
-add_executable(${mutex_example})
-
-set(thread_example thread_example)
-add_executable(${thread_example})
 
 foreach(example IN LISTS example_list)
   cmake_print_variables(example)
+  add_executable(${example})
   target_sources(${example} PRIVATE
     src/${example}.cpp
   )

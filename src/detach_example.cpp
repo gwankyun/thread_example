@@ -1,11 +1,9 @@
 ﻿#include <thread> // std::thread std::jthread
 #include <chrono> // std::chrono
-#include <mutex>  // std::mutex std::lock_guard std::unique_lock
-#include <condition_variable> // std::condition_variable
-#include <vector> // std::vector
+#include <mutex>  // std::mutex std::unique_lock
 using namespace std::literals;
 
-#include <common.hpp> // join wait_for
+#include <spdlog/spdlog.h> // SPDLOG_INFO
 
 /// @brief 分離
 void example_detach()
@@ -16,34 +14,39 @@ void example_detach()
 
     std::thread t([&mtx, &cv, &flag]
         {
-            std::this_thread::sleep_for(3s);
+            std::this_thread::sleep_for(1s);
             {
                 std::unique_lock<std::mutex> lock(mtx);
                 flag = true;
             }
-            // lock.unlock();
-            SPDLOG_INFO("child");
-            cv.notify_one();
+            SPDLOG_INFO("child begin");
         });
 
-    DBG(t.joinable()); // true
+    SPDLOG_INFO("t.joinable(): {}", t.joinable()); // true
     t.detach(); // 線程和線程柄分離
-    DBG(t.joinable()); // false
+    SPDLOG_INFO("t.joinable(): {}", t.joinable()); // false
 
-    wait_for(mtx, cv, 200ms, [&flag] { return flag; },
-        [](bool _result)
+    while (true)
+    {
         {
-            DBG(_result);
-            std::this_thread::sleep_for(200ms);
-            return _result;
-        });
+            std::unique_lock<std::mutex> lock(mtx); // #1
+            if (flag)
+            {
+                SPDLOG_INFO("child end");
+                break;
+            }
+            else
+            {
+                SPDLOG_INFO("wait");
+            }
+        }
+        std::this_thread::sleep_for(100ms);
+    }
 }
 
 int main()
 {
-#if HAS_SPDLOG
-    spdlog::set_pattern("[%Y-%m-%d %T.%e] [%^%l%$] [t:%6t] [p:%6P] [%-20!!:%4#] %v");
-#endif
+    spdlog::set_pattern("[%C-%m-%d %T.%e] [%^%l%$] [t:%6t] [%-20!!:%4#] %v");
 
     example_detach();
 

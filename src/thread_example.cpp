@@ -1,20 +1,14 @@
-﻿#include <thread> // std::thread std::jthread
+﻿#include <thread> // std::thread 
 #include <chrono> // std::chrono
-#include <mutex>  // std::mutex std::lock_guard std::unique_lock
-#include <condition_variable> // std::condition_variable
-#include <vector> // std::vector
-#include <iostream>
-#include <future> // std::promise std::future std::launch std::packaged_task std::async
-using namespace std::literals;
 
-#include <common.hpp> // join wait_for
+#include <spdlog/spdlog.h> // SPDLOG_INFO
 
 /// @brief 創建線程
 void example_thread()
 {
     std::thread t([]
         {
-            std::this_thread::sleep_for(std::chrono::seconds(3));
+            std::this_thread::sleep_for(std::chrono::seconds(1));
             SPDLOG_INFO("child");
         });
 
@@ -27,9 +21,7 @@ void example_thread()
 
 int main()
 {
-#if HAS_SPDLOG
-    spdlog::set_pattern("[%Y-%m-%d %T.%e] [%^%l%$] [t:%6t] [p:%6P] [%-20!!:%4#] %v");
-#endif
+    spdlog::set_pattern("[%C-%m-%d %T.%e] [%^%l%$] [t:%6t] [%-20!!:%4#] %v");
 
     example_thread();
 

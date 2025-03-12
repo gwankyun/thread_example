@@ -1,85 +1,55 @@
-﻿#include <thread> // std::thread std::jthread
+﻿#include <thread> // std::jthread
 #include <chrono> // std::chrono
-#include <mutex>  // std::mutex std::lock_guard std::unique_lock
-#include <condition_variable> // std::condition_variable
-#include <vector> // std::vector
-#include <latch>
-#include <iostream>
+#include <latch> // std::latch
 using namespace std::literals;
 
-#include <common.hpp> // join wait_for
-
-void on_latch(std::latch& _lt)
-{
-    while (true)
-    {
-        std::this_thread::sleep_for(500ms);
-        if (_lt.try_wait()) // 非阻塞等待計數為零 #2
-        {
-            SPDLOG_INFO("latch open");
-            return;
-        }
-        else
-        {
-            SPDLOG_INFO("count_down");
-            _lt.count_down(); // 計數減一 #1
-        }
-    }
-}
+#include <spdlog/spdlog.h> // SPDLOG_INFO
 
 /// @brief 閂
 void example_latch()
 {
-    // std::latch lt(5);
+    std::latch ltc_main{2};
+    std::latch ltc_1{1};
+    std::latch ltc_2{1};
 
-    // std::jthread t([&lt] { on_latch(lt); });
+    std::jthread t1([&ltc_main, &ltc_1, &ltc_2]
+        {
+            SPDLOG_INFO("ltc_1 begin");
+            ltc_1.count_down();
+            while (!ltc_2.try_wait())
+            {
+                SPDLOG_INFO("wait");
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+            SPDLOG_INFO("ltc_1 end");
+            ltc_main.count_down();
+        });
 
-    // on_latch(lt);
+    std::jthread t2([&ltc_main, &ltc_1, &ltc_2]
+        {
+            while (!ltc_1.try_wait())
+            {
+                SPDLOG_INFO("wait");
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+            SPDLOG_INFO("ltc_2 begin");
+            ltc_2.count_down();
+            SPDLOG_INFO("ltc_2 end");
+            ltc_main.count_down();
+        });
 
-    struct Job
+    SPDLOG_INFO("ltc_main begin");
+    while (!ltc_main.try_wait())
     {
-        const std::string name;
-        std::string product{"未工作"};
-        std::thread action{};
-    };
-
-    Job jobs[]{{"Annika"}, {"Buru"}, {"Chuck"}};
- 
-    std::latch work_done{std::size(jobs)};
-    std::latch start_clean_up{1};
- 
-    auto work = [&](Job& my_job)
-    {
-        my_job.product = my_job.name + " 已工作";
-        work_done.count_down();
-        start_clean_up.wait();
-        my_job.product = my_job.name + " 已清理";
-    };
- 
-    std::cout << "工作启动... ";
-    for (auto& job : jobs)
-        job.action = std::thread{work, std::ref(job)};
- 
-    work_done.wait();
-    std::cout << "完成:\n";
-    for (auto const& job : jobs)
-        std::cout << "  " << job.product << '\n';
- 
-    std::cout << "清理工作线程... ";
-    start_clean_up.count_down();
-    for (auto& job : jobs)
-        job.action.join();
- 
-    std::cout << "完成:\n";
-    for (auto const& job : jobs)
-        std::cout << "  " << job.product << '\n';
+        SPDLOG_INFO("wait");
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+    SPDLOG_INFO("ltc_main end");
 }
 
 int main()
 {
-#if HAS_SPDLOG
-    spdlog::set_pattern("[%Y-%m-%d %T.%e] [%^%l%$] [t:%6t] [p:%6P] [%-20!!:%4#] %v");
-#endif
+    spdlog::set_pattern("[%C-%m-%d %T.%e] [%^%l%$] [t:%6t] [%-20!!:%4#] %v");
 
     example_latch();
     

@@ -1,12 +1,9 @@
-﻿#include <thread> // std::thread std::jthread
+﻿#include <thread> // std::jthread
 #include <chrono> // std::chrono
-#include <mutex>  // std::mutex std::lock_guard std::unique_lock
-#include <condition_variable> // std::condition_variable
-#include <vector> // std::vector
 #include <barrier> // std::barrier
 using namespace std::literals;
 
-#include <common.hpp> // join wait_for
+#include <spdlog/spdlog.h> // SPDLOG_INFO
 
 /// @brief 屏障
 void example_barrier()
@@ -35,9 +32,7 @@ void example_barrier()
 
 int main()
 {
-#if HAS_SPDLOG
-    spdlog::set_pattern("[%Y-%m-%d %T.%e] [%^%l%$] [t:%6t] [p:%6P] [%-20!!:%4#] %v");
-#endif
+    spdlog::set_pattern("[%C-%m-%d %T.%e] [%^%l%$] [t:%6t] [%-20!!:%4#] %v");
 
     example_barrier();
 

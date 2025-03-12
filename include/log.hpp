@@ -1,3 +1,7 @@
+#ifndef HAS_SPDLOG
+#  define HAS_SPDLOG 1
+#endif
+
 #if HAS_SPDLOG
 #  include <spdlog/spdlog.h>
 #else

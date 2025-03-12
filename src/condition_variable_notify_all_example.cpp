@@ -1,14 +1,17 @@
-﻿
-#include <thread> // std::thread std::jthread
+﻿#include <thread> // std::thread
 #include <chrono> // std::chrono
-#include <mutex>  // std::mutex std::lock_guard std::unique_lock
+#include <mutex>  // std::mutex std::unique_lock
 #include <condition_variable> // std::condition_variable
-#include <vector> // std::vector
-#include <iostream>
-#include <future> // std::promise std::future std::launch std::packaged_task std::async
-using namespace std::literals;
 
-#include <common.hpp> // join wait_for
+#include <spdlog/spdlog.h> // SPDLOG_INFO
+
+void join(std::thread& _thread)
+{
+    if (_thread.joinable())
+    {
+        _thread.join();
+    }
+}
 
 enum struct State
 {
@@ -77,9 +80,7 @@ void example_condition_variable_notify_all()
 
 int main()
 {
-#if HAS_SPDLOG
-    spdlog::set_pattern("[%Y-%m-%d %T.%e] [%^%l%$] [t:%6t] [p:%6P] [%-20!!:%4#] %v");
-#endif
+    spdlog::set_pattern("[%C-%m-%d %T.%e] [%^%l%$] [t:%6t] [%-20!!:%4#] %v");
 
     example_condition_variable_notify_all();
 
