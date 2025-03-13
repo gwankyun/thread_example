@@ -1,32 +1,31 @@
-﻿#include <thread> // std::thread
-#include <chrono> // std::chrono
-#include <mutex>  // std::mutex std::unique_lock
+﻿#include <chrono>             // std::chrono
 #include <condition_variable> // std::condition_variable
+#include <mutex>              // std::mutex std::unique_lock
+#include <thread>             // std::jthread
+#include <string>
+using namespace std::literals;
 
-#include <spdlog/spdlog.h> // SPDLOG_INFO
-
-void join(std::thread& _thread)
-{
-    if (_thread.joinable())
-    {
-        _thread.join();
-    }
-}
+#include <catch2/../catch2/catch_session.hpp>
+#include <catch2/catch_test_macros.hpp> // TEST_CASE REQUIRE
+#include <spdlog/spdlog.h>              // SPDLOG_INFO
 
 /// @brief 條件變量
-void example_condition_variable_notify_one()
+std::string example_condition_variable_notify_one()
 {
     using std::this_thread::sleep_for;
-    std::mutex mtx; // 鎖
+    std::mutex mtx;             // 鎖
     std::condition_variable cv; // 條件變量
     auto flag = false;
+    std::string result;
 
-    std::thread t([&mtx, &cv, &flag]
+    std::jthread t(
+        [&mtx, &cv, &flag, &result]
         {
             std::unique_lock<std::mutex> lock(mtx);
             cv.wait(lock, [&flag] { return flag; }); // 等待主線程#4通知
             SPDLOG_INFO("Child recv");
-            sleep_for(std::chrono::seconds(1));
+            result += "2";
+            sleep_for(1s);
             flag = true;
             lock.unlock();
             cv.notify_one(); // 通知主線程 #5
@@ -34,23 +33,29 @@ void example_condition_variable_notify_one()
         });
 
     SPDLOG_INFO("Main send");
+    result += "1";
     std::unique_lock<std::mutex> lock(mtx); // #1
     flag = true;
-    lock.unlock(); // 提前解鎖 #2
+    lock.unlock();   // 提前解鎖 #2
     cv.notify_one(); // 通知子線程 #4
-    sleep_for(std::chrono::seconds(1));
-    lock.lock(); // 再次上鎖 #3
+    sleep_for(1s);
+    lock.lock();                             // 再次上鎖 #3
     cv.wait(lock, [&flag] { return flag; }); // 等待子線程#5通知
     SPDLOG_INFO("Main recv");
+    result += "3";
 
-    join(t);
+    return result;
 }
 
-int main()
+TEST_CASE("condition_variable", "[notify_one]")
+{
+    REQUIRE(example_condition_variable_notify_one() == "123");
+}
+
+int main(int _argc, char* _argv[])
 {
     spdlog::set_pattern("[%C-%m-%d %T.%e] [%^%l%$] [t:%6t] [%-20!!:%4#] %v");
 
-    example_condition_variable_notify_one();
-
-    return 0;
+    auto result = Catch::Session().run(_argc, _argv);
+    return result;
 }

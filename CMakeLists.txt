@@ -31,6 +31,9 @@ add_compile_definitions("$<$<BOOL:WIN32>:_WIN32_WINNT=${ver}")
 find_package(spdlog CONFIG REQUIRED)
 check_package(spdlog)
 
+find_package(Catch2 3 REQUIRED)
+check_package(Catch2)
+
 set(common common)
 add_library(${common} INTERFACE)
 target_sources(${common} INTERFACE
@@ -39,7 +42,7 @@ target_sources(${common} INTERFACE
 target_include_directories(${common} INTERFACE include)
 target_link_libraries(${common} INTERFACE
   # $<TARGET_NAME_IF_EXISTS:spdlog::spdlog>
-  spdlog::spdlog
+  spdlog::spdlog Catch2::Catch2
 )
 # target_compile_definitions(${common} INTERFACE
 #   HAS_SPDLOG=$<TARGET_EXISTS:spdlog::spdlog>
@@ -78,9 +81,6 @@ if(POLICY CMP0167)
 endif()
 find_package(Boost REQUIRED)
 check_package(Boost)
-
-find_package(Catch2 3 REQUIRED)
-check_package(Catch2)
 
 set(test test)
 add_executable(${test})

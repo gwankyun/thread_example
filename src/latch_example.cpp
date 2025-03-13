@@ -3,55 +3,40 @@
 #include <latch> // std::latch
 using namespace std::literals;
 
-#include <spdlog/spdlog.h> // SPDLOG_INFO
+#include <catch2/../catch2/catch_session.hpp>
+#include <catch2/catch_test_macros.hpp> // TEST_CASE REQUIRE
+#include <spdlog/spdlog.h>              // SPDLOG_INFO
 
 /// @brief 閂
-void example_latch()
+TEST_CASE("thread", "[latch]")
 {
-    std::latch ltc_main{2};
-    std::latch ltc_1{1};
-    std::latch ltc_2{1};
+    std::atomic<int> result = 0;
+    std::latch ltc{4};
 
-    std::jthread t1([&ltc_main, &ltc_1, &ltc_2]
-        {
-            SPDLOG_INFO("ltc_1 begin");
-            ltc_1.count_down();
-            while (!ltc_2.try_wait())
-            {
-                SPDLOG_INFO("wait");
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            }
-            SPDLOG_INFO("ltc_1 end");
-            ltc_main.count_down();
-        });
-
-    std::jthread t2([&ltc_main, &ltc_1, &ltc_2]
-        {
-            while (!ltc_1.try_wait())
-            {
-                SPDLOG_INFO("wait");
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            }
-            SPDLOG_INFO("ltc_2 begin");
-            ltc_2.count_down();
-            SPDLOG_INFO("ltc_2 end");
-            ltc_main.count_down();
-        });
-
-    SPDLOG_INFO("ltc_main begin");
-    while (!ltc_main.try_wait())
+    for (auto i = 0; i != 3; i++)
     {
-        SPDLOG_INFO("wait");
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::jthread t(
+            [i, &result, &ltc]
+            {
+                SPDLOG_INFO("i: {}", i);
+                std::this_thread::sleep_for(100ms);
+                result += 1;
+                ltc.arrive_and_wait(); // 減一並等變零
+            });
+        t.detach();
     }
-    SPDLOG_INFO("ltc_main end");
+
+    ltc.count_down();
+    SPDLOG_INFO("main");
+    ltc.wait(); 
+
+    REQUIRE(result == 3);
 }
 
-int main()
+int main(int _argc, char* _argv[])
 {
     spdlog::set_pattern("[%C-%m-%d %T.%e] [%^%l%$] [t:%6t] [%-20!!:%4#] %v");
 
-    example_latch();
-    
-    return 0;
+    auto result = Catch::Session().run(_argc, _argv);
+    return result;
 }

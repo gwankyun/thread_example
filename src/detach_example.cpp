@@ -1,30 +1,49 @@
-﻿#include <thread> // std::thread std::jthread
-#include <chrono> // std::chrono
+﻿#include <chrono> // std::chrono
 #include <mutex>  // std::mutex std::unique_lock
+#include <string> // std::string
+#include <thread> // std::jthread
 using namespace std::literals;
 
+#include <catch2/../catch2/catch_session.hpp>
+#include <catch2/catch_test_macros.hpp> // TEST_CASE REQUIRE
 #include <spdlog/spdlog.h> // SPDLOG_INFO
 
 /// @brief 分離
-void example_detach()
+std::string example_detach(bool _detach)
 {
-    std::mutex mtx; // 鎖
-    std::condition_variable cv; // 條件變量
+    using std::this_thread::sleep_for;
+    std::mutex mtx;    // 鎖
     auto flag = false; // 用於標識子線程結束
+    std::string result;
 
-    std::thread t([&mtx, &cv, &flag]
-        {
-            std::this_thread::sleep_for(1s);
+    {
+        std::jthread t(
+            [&mtx, &flag, &result]
             {
-                std::unique_lock<std::mutex> lock(mtx);
-                flag = true;
-            }
-            SPDLOG_INFO("child begin");
-        });
+                sleep_for(100ms);
+                SPDLOG_INFO("child begin");
+                result += "3";
+                sleep_for(1s);
+                {
+                    std::unique_lock<std::mutex> lock(mtx);
+                    flag = true;
+                }
+                SPDLOG_INFO("child end");
+                result += "4";
+            });
 
-    SPDLOG_INFO("t.joinable(): {}", t.joinable()); // true
-    t.detach(); // 線程和線程柄分離
-    SPDLOG_INFO("t.joinable(): {}", t.joinable()); // false
+        SPDLOG_INFO("t.joinable(): {}", t.joinable()); // true
+        if (_detach)
+        {
+            t.detach(); // 線程和線程柄分離
+        }
+        SPDLOG_INFO("t.joinable(): {}", t.joinable()); // false
+        SPDLOG_INFO("main begin");
+        result += "1";
+    }
+
+    SPDLOG_INFO("main end");
+    result += "2";
 
     while (true)
     {
@@ -32,7 +51,6 @@ void example_detach()
             std::unique_lock<std::mutex> lock(mtx); // #1
             if (flag)
             {
-                SPDLOG_INFO("child end");
                 break;
             }
             else
@@ -40,15 +58,21 @@ void example_detach()
                 SPDLOG_INFO("wait");
             }
         }
-        std::this_thread::sleep_for(100ms);
+        sleep_for(100ms);
     }
+    return result;
 }
 
-int main()
+TEST_CASE("thread", "[detach]")
+{
+    REQUIRE(example_detach(true) == "1234");
+    REQUIRE(example_detach(false) == "1342");
+}
+
+int main(int _argc, char* _argv[])
 {
     spdlog::set_pattern("[%C-%m-%d %T.%e] [%^%l%$] [t:%6t] [%-20!!:%4#] %v");
 
-    example_detach();
-
-    return 0;
+    auto result = Catch::Session().run(_argc, _argv);
+    return result;
 }

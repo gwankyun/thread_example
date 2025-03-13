@@ -1,55 +1,49 @@
-#include <thread> // std::thread 
 #include <chrono> // std::chrono
 #include <mutex>  // std::mutex std::lock_guard
+#include <string> // std::string
+#include <thread> // std::jthread
+using namespace std::literals;
 
-#include <spdlog/spdlog.h> // SPDLOG_INFO
+#include <catch2/../catch2/catch_session.hpp>
+#include <catch2/catch_test_macros.hpp> // TEST_CASE REQUIRE
+#include <spdlog/spdlog.h>              // SPDLOG_INFO
 
-void join(std::thread& _thread)
-{
-    if (_thread.joinable())
-    {
-        _thread.join();
-    }
-}
-
-void print_mutex(std::mutex& _mtx, int& _i)
+void print_mutex(std::mutex& _mtx, int& _i, int& _result)
 {
     while (true)
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
         {
             std::lock_guard<std::mutex> lock(_mtx); // 自動解鎖
-            if (_i >= 10) // 判斷也要加鎖
+            if (_i >= 10)                           // 判斷也要加鎖
             {
                 return;
             }
             SPDLOG_INFO("_i: {}", _i);
+            _result += _i;
             _i++;
         }
+        std::this_thread::sleep_for(100ms);
     }
 }
 
 /// @brief 鎖
-void example_mutex()
+TEST_CASE("thread", "[mutex]")
 {
     std::mutex mtx;
     auto i = 0;
+    int result = 0;
 
-    std::thread t([&mtx, &i]
-        {
-            print_mutex(mtx, i);
-        });
+    std::jthread t([&mtx, &i, &result] { print_mutex(mtx, i, result); });
 
-    print_mutex(mtx, i);
+    print_mutex(mtx, i, result);
 
-    join(t);
+    REQUIRE(result == 45);
 }
 
-int main()
+int main(int _argc, char* _argv[])
 {
     spdlog::set_pattern("[%C-%m-%d %T.%e] [%^%l%$] [t:%6t] [%-20!!:%4#] %v");
 
-    example_mutex();
-
-    return 0;
+    auto result = Catch::Session().run(_argc, _argv);
+    return result;
 }

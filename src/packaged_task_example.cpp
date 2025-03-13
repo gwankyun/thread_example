@@ -1,10 +1,14 @@
-﻿#include <thread> // std::thread std::jthread
+﻿#include <thread> // std::jthread
 #include <chrono> // std::chrono
 #include <future> // std::packaged_task
-#include <spdlog/spdlog.h> // SPDLOG_INFO
+using namespace std::literals;
+
+#include <catch2/../catch2/catch_session.hpp>
+#include <catch2/catch_test_macros.hpp> // TEST_CASE REQUIRE
+#include <spdlog/spdlog.h>              // SPDLOG_INFO
 
 /// @brief 任務
-void example_packaged_task()
+int example_packaged_task()
 {
     using std::this_thread::sleep_for;
     std::packaged_task<int()> task(
@@ -13,25 +17,24 @@ void example_packaged_task()
             for (auto i = 0; i < 10; i++)
             {
                 SPDLOG_INFO("child");
-                sleep_for(std::chrono::milliseconds(100));
+                sleep_for(100ms);
             }
             return 99;
         });
     auto future = task.get_future();
 
-    std::thread t([&task] { task(); });
+    std::jthread t([&task] { task(); });
 
     auto result = [&future]
     {
         using std::future_status;
         while (true)
         {
-            auto status = future.wait_for(std::chrono::milliseconds(100));
+            auto status = future.wait_for(100ms);
             switch (status)
             {
             case future_status::ready:
                 return future.get();
-                break;
             case future_status::timeout:
                 SPDLOG_INFO("timeout");
                 break;
@@ -45,18 +48,18 @@ void example_packaged_task()
     }();
 
     SPDLOG_INFO("result: {}", result);
-
-    if (t.joinable())
-    {
-        t.join();
-    }
+    return result;
 }
 
-int main()
+TEST_CASE("future", "[packaged_task]")
+{
+    REQUIRE(example_packaged_task() == 99);
+}
+
+int main(int _argc, char* _argv[])
 {
     spdlog::set_pattern("[%C-%m-%d %T.%e] [%^%l%$] [t:%6t] [%-20!!:%4#] %v");
 
-    example_packaged_task();
-
-    return 0;
+    auto result = Catch::Session().run(_argc, _argv);
+    return result;
 }

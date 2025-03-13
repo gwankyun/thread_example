@@ -1,51 +1,52 @@
 ﻿#include <thread> // std::thread
 #include <chrono> // std::chrono
 #include <atomic> // std::atomic
+using namespace std::literals;
 
-#include <spdlog/spdlog.h> // SPDLOG_INFO
+#include <catch2/../catch2/catch_session.hpp>
+#include <catch2/catch_test_macros.hpp> // TEST_CASE REQUIRE
+#include <spdlog/spdlog.h>              // SPDLOG_INFO
 
-void join(std::thread& _thread)
-{
-    if (_thread.joinable())
-    {
-        _thread.join();
-    }
-}
-
-void print_atomic(std::atomic<int>& _i)
+void print_atomic(std::atomic<int>& _i, std::atomic<int>& _result)
 {
     while (true)
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
-        auto value = _i.fetch_add(1); // 原子加一並返回原先的值
-        if (value >= 10)
         {
-            return;
+            auto value = _i.fetch_add(1); // 原子加一並返回原先的值
+            if (value >= 10)
+            {
+                return;
+            }
+            _result.fetch_add(value);
+            SPDLOG_INFO("value: {}", value);
         }
-        SPDLOG_INFO("value: {}", value);
+        std::this_thread::sleep_for(100ms);
     }
 }
 
+
 /// @brief 原子操作
-void example_atomic()
+TEST_CASE("thread", "[atomic]")
 {
     std::atomic<int> i = 0;
+    std::atomic<int> result = 0;
 
-    std::thread t([&i]
-        {
-            print_atomic(i);
-        });
+    std::jthread t([&i, &result] { print_atomic(i, result); });
 
-    print_atomic(i);
+    print_atomic(i, result);
 
-    join(t);
+    while (i.load() < 10)
+    {
+        SPDLOG_INFO("wait");
+    }
+
+    REQUIRE(result == 45);
 }
 
-int main()
+int main(int _argc, char* _argv[])
 {
     spdlog::set_pattern("[%C-%m-%d %T.%e] [%^%l%$] [t:%6t] [%-20!!:%4#] %v");
 
-    example_atomic();
-
-    return 0;
+    auto result = Catch::Session().run(_argc, _argv);
+    return result;
 }

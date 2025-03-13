@@ -1,17 +1,20 @@
 #include <chrono> // std::chrono
 #include <future> // std::async
+using namespace std::literals;
 
-#include <spdlog/spdlog.h> // SPDLOG_INFO
+#include <catch2/../catch2/catch_session.hpp>
+#include <catch2/catch_test_macros.hpp> // TEST_CASE REQUIRE
+#include <spdlog/spdlog.h>              // SPDLOG_INFO
 
 /// @brief 異步調用
-void example_async()
+int example_async()
 {
     auto future = std::async(std::launch::async, []
         {
             for (auto i = 0; i < 10; i++)
             {
                 SPDLOG_INFO("child");
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                std::this_thread::sleep_for(100ms);
             }
             return 99;
         });
@@ -21,12 +24,11 @@ void example_async()
         using std::future_status;
         while (true)
         {
-            auto status = future.wait_for(std::chrono::milliseconds(100));
+            auto status = future.wait_for(100ms);
             switch (status)
             {
             case future_status::ready:
                 return future.get();
-                break;
             case future_status::timeout:
                 SPDLOG_INFO("timeout");
                 break;
@@ -40,13 +42,18 @@ void example_async()
     }();
 
     SPDLOG_INFO("result: {}", result);
+    return result;
 }
 
-int main()
+TEST_CASE("future", "[async]")
+{
+    REQUIRE(example_async() == 99);
+}
+
+int main(int _argc, char* _argv[])
 {
     spdlog::set_pattern("[%C-%m-%d %T.%e] [%^%l%$] [t:%6t] [%-20!!:%4#] %v");
 
-    example_async();
-
-    return 0;
+    auto result = Catch::Session().run(_argc, _argv);
+    return result;
 }
