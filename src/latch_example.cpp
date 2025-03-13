@@ -28,7 +28,7 @@ TEST_CASE("thread", "[latch]")
 
     ltc.count_down();
     SPDLOG_INFO("main");
-    ltc.wait(); 
+    ltc.wait();
 
     REQUIRE(result == 3);
 }

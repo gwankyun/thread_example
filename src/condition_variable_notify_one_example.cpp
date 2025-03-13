@@ -2,7 +2,7 @@
 #include <condition_variable> // std::condition_variable
 #include <mutex>              // std::mutex std::unique_lock
 #include <thread>             // std::jthread
-#include <string>
+#include <string>             // std::string
 using namespace std::literals;
 
 #include <catch2/../catch2/catch_session.hpp>

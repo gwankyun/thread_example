@@ -1,5 +1,4 @@
-﻿
-#include <thread> // std::jthread
+﻿#include <thread> // std::jthread
 #include <chrono> // std::chrono
 #include <semaphore> // std::binary_semaphore
 #include <string>

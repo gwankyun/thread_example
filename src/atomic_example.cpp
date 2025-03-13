@@ -24,7 +24,6 @@ void print_atomic(std::atomic<int>& _i, std::atomic<int>& _result)
     }
 }
 
-
 /// @brief 原子操作
 TEST_CASE("thread", "[atomic]")
 {
@@ -35,7 +34,7 @@ TEST_CASE("thread", "[atomic]")
 
     print_atomic(i, result);
 
-    while (i.load() < 10)
+    while (i.load() < 10) // 原子讀取值
     {
         SPDLOG_INFO("wait");
     }

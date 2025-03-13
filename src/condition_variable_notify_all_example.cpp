@@ -1,7 +1,7 @@
 ﻿#include <chrono>             // std::chrono
 #include <condition_variable> // std::condition_variable
 #include <mutex>              // std::mutex std::unique_lock
-#include <string>
+#include <string>             // std::string
 #include <thread> // std::jthread
 using namespace std::literals;
 
