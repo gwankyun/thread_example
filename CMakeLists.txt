@@ -58,13 +58,12 @@ target_link_libraries(${main} PRIVATE
   ${common}
 )
 
-set(example_list detach_example atomic_example barrier_example latch_example
-  semaphore_example jthread_example async_example packaged_task_example
-  condition_variable_notify_all_example condition_variable_notify_one_example
-  mutex_example thread_example promise_example
+set(example_list detach atomic barrier latch semaphore jthread async packaged_task
+  condition_variable_notify_all condition_variable_notify_one mutex thread promise
 )
 
-foreach(example IN LISTS example_list)
+foreach(name IN LISTS example_list)
+  set(example ${name}_example)
   cmake_print_variables(example)
   add_executable(${example})
   target_sources(${example} PRIVATE
